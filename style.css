@@ -54,6 +54,12 @@ body {
     transition: all 0.3s ease;
 }
 
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .brand-badge {
     display: inline-block;
     background: rgba(255, 215, 0, 0.15);
@@ -65,6 +71,29 @@ body {
     font-weight: 700;
     letter-spacing: 1.5px;
     margin-bottom: 8px;
+}
+
+.treasure-icon-btn {
+    background: var(--gold-glow);
+    color: #121C2D;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    box-shadow: 0 0 15px var(--gold-glow);
+    animation: pulseGlow 2s infinite alternate;
+    transition: transform 0.2s;
+}
+
+.treasure-icon-btn:hover {
+    transform: scale(1.15);
+}
+
+@keyframes pulseGlow {
+    from { box-shadow: 0 0 8px var(--gold-glow); }
+    to { box-shadow: 0 0 20px var(--gold-glow), 0 0 30px #FF5E36; }
 }
 
 .header h1 {
@@ -474,6 +503,150 @@ body {
     z-index: 999;
 }
 
+/* MODAL & MINI GAME STYLING */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(5, 12, 24, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.hidden, .hidden {
+    display: none !important;
+}
+
+.modal-card {
+    background: #121C2D;
+    border: 2px solid var(--gold-glow);
+    border-radius: 24px;
+    padding: 30px;
+    max-width: 440px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+    animation: modalPop 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes modalPop {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.8rem;
+    cursor: pointer;
+}
+
+.treasure-chest-icon {
+    font-size: 3.5rem;
+    color: var(--gold-glow);
+    margin-bottom: 15px;
+    animation: floatChest 2s infinite ease-in-out;
+}
+
+@keyframes floatChest {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.modal-card h2 {
+    font-family: var(--font-title);
+    font-size: 1.5rem;
+    color: var(--gold-glow);
+    margin-bottom: 10px;
+}
+
+.modal-card p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.btn-treasure {
+    background: var(--gold-glow);
+    color: #121C2D;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+    transition: transform 0.2s;
+}
+
+.btn-treasure:hover {
+    transform: scale(1.05);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.game-header h3 {
+    font-size: 1rem;
+    color: #fff;
+}
+
+.game-score {
+    font-weight: 700;
+    color: var(--gold-glow);
+}
+
+.game-instruction {
+    font-size: 0.75rem !important;
+    margin-bottom: 12px !important;
+}
+
+.canvas-wrapper {
+    background: #0A111E;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+#gameCanvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: crosshair;
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
 .toast-container {
     position: fixed;
     top: 20px;
@@ -504,17 +677,8 @@ body {
 }
 
 @media (max-width: 640px) {
-    body {
-        padding: 15px 10px;
-    }
-    .container {
-        padding: 20px;
-    }
-    .input-row {
-        flex-direction: column;
-    }
-    .btn-primary {
-        justify-content: center;
-        padding: 12px;
-    }
-}
+    body { padding: 15px 10px; }
+    .container { padding: 20px; }
+    .input-row { flex-direction: column; }
+    .btn-primary { justify-content: center; padding: 12px; }
+}   
