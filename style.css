@@ -503,6 +503,7 @@ body {
     z-index: 999;
 }
 
+/* MODAL & HADIAH RANDOM STYLING */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -527,7 +528,7 @@ body {
     border: 2px solid var(--gold-glow);
     border-radius: 24px;
     padding: 28px;
-    max-width: 440px;
+    max-width: 460px;
     width: 100%;
     text-align: center;
     position: relative;
@@ -599,13 +600,19 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .game-stat {
     font-weight: 700;
     color: var(--gold-glow);
     font-size: 0.9rem;
+}
+
+.game-hint {
+    font-size: 0.75rem !important;
+    margin-bottom: 10px !important;
+    color: var(--text-muted);
 }
 
 .canvas-wrapper {
@@ -625,22 +632,69 @@ body {
 }
 
 .game-over-box {
-    background: rgba(255,215,0,0.1);
+    background: rgba(255,215,0,0.08);
     border: 1px solid var(--gold-glow);
-    border-radius: 12px;
-    padding: 10px;
+    border-radius: 14px;
+    padding: 14px;
     margin-bottom: 15px;
 }
 
 .game-over-box h4 {
     color: var(--gold-glow);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    margin-bottom: 4px;
 }
 
 .game-over-box p {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #fff;
-    margin-bottom: 0;
+    margin-bottom: 10px;
+}
+
+.reward-section {
+    background: rgba(18, 28, 45, 0.9);
+    border: 1px dashed var(--gold-glow);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+}
+
+.reward-badge {
+    color: var(--gold-glow);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.reward-section h5 {
+    color: #FFF;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.reward-section p {
+    font-size: 0.75rem !important;
+    margin-bottom: 10px !important;
+    color: var(--text-muted);
+}
+
+.btn-reward-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary-gradient);
+    color: #FFF;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(255, 94, 54, 0.4);
+}
+
+.btn-reward-link:hover {
+    transform: translateY(-2px);
 }
 
 .btn-secondary {
