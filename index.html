@@ -96,7 +96,6 @@
         </main>
     </div>
 
-    <!-- MODAL KEJUTAN HARTA KARUN & MINI GAME -->
     <div id="treasure-modal" class="modal-overlay hidden">
         <div class="modal-card">
             <button id="close-modal-btn" class="close-modal">&times;</button>
@@ -105,20 +104,23 @@
                     <i class="fa-solid fa-box-open"></i>
                 </div>
                 <h2>HARTA KARUN TERBUKA! 🏴‍☠️✨</h2>
-                <p>Selamat Nakama! Seluruh misi di peta pelayaran telah kamu selesaikan. Kamu berhak atas hadiah hiburan bajak laut!</p>
+                <p>Selamat Nakama! Seluruh misi di peta pelayaran telah kamu selesaikan. Uji ketangkasan meriam bajak lautmu sekarang!</p>
                 <button id="play-game-btn" class="btn-treasure">
-                    <i class="fa-solid fa-gamepad"></i> MAINKAN MINI GAME BAJAK LAUT
+                    <i class="fa-solid fa-crosshairs"></i> BUKA PERTAHANAN MERIAM
                 </button>
             </div>
 
             <div id="treasure-game-container" class="modal-content-state hidden">
                 <div class="game-header">
-                    <h3>🎯 Tembak Sasaran Meriam!</h3>
-                    <div class="game-score">Skor: <span id="game-score-val">0</span></div>
+                    <div class="game-stat"><i class="fa-solid fa-clock"></i> <span id="game-timer-val">30</span>s</div>
+                    <div class="game-stat"><i class="fa-solid fa-trophy"></i> <span id="game-score-val">0</span> Berry</div>
                 </div>
-                <p class="game-instruction">Klik/sentuh target bajak laut yang muncul sebelum menghilang!</p>
                 <div class="canvas-wrapper">
-                    <canvas id="gameCanvas" width="360" height="240"></canvas>
+                    <canvas id="gameCanvas" width="380" height="260"></canvas>
+                </div>
+                <div id="game-over-box" class="game-over-box hidden">
+                    <h4 id="game-rank-title">Gelar: Rookie Pirate</h4>
+                    <p id="game-final-score">Poin Bounty: 0 Berry</p>
                 </div>
                 <button id="restart-game-btn" class="btn-secondary">
                     <i class="fa-solid fa-rotate-right"></i> Main Lagi

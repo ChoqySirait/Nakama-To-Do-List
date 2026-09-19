@@ -503,7 +503,6 @@ body {
     z-index: 999;
 }
 
-/* MODAL & MINI GAME STYLING */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -517,8 +516,6 @@ body {
     align-items: center;
     justify-content: center;
     padding: 20px;
-    opacity: 1;
-    transition: opacity 0.3s ease;
 }
 
 .modal-overlay.hidden, .hidden {
@@ -529,7 +526,7 @@ body {
     background: #121C2D;
     border: 2px solid var(--gold-glow);
     border-radius: 24px;
-    padding: 30px;
+    padding: 28px;
     max-width: 440px;
     width: 100%;
     text-align: center;
@@ -568,7 +565,7 @@ body {
 
 .modal-card h2 {
     font-family: var(--font-title);
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     color: var(--gold-glow);
     margin-bottom: 10px;
 }
@@ -602,30 +599,22 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-.game-header h3 {
-    font-size: 1rem;
-    color: #fff;
-}
-
-.game-score {
+.game-stat {
     font-weight: 700;
     color: var(--gold-glow);
-}
-
-.game-instruction {
-    font-size: 0.75rem !important;
-    margin-bottom: 12px !important;
+    font-size: 0.9rem;
 }
 
 .canvas-wrapper {
-    background: #0A111E;
-    border-radius: 12px;
+    background: #09121F;
+    border-radius: 16px;
     overflow: hidden;
     margin-bottom: 15px;
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    position: relative;
 }
 
 #gameCanvas {
@@ -635,14 +624,33 @@ body {
     cursor: crosshair;
 }
 
+.game-over-box {
+    background: rgba(255,215,0,0.1);
+    border: 1px solid var(--gold-glow);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.game-over-box h4 {
+    color: var(--gold-glow);
+    font-size: 0.95rem;
+}
+
+.game-over-box p {
+    font-size: 0.8rem;
+    color: #fff;
+    margin-bottom: 0;
+}
+
 .btn-secondary {
     background: rgba(255,255,255,0.1);
     color: #fff;
     border: 1px solid rgba(255,255,255,0.2);
-    padding: 8px 16px;
-    border-radius: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
     font-family: var(--font-sans);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
 }
@@ -681,4 +689,4 @@ body {
     .container { padding: 20px; }
     .input-row { flex-direction: column; }
     .btn-primary { justify-content: center; padding: 12px; }
-}   
+}
