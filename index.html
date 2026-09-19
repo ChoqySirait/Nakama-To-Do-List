@@ -96,32 +96,49 @@
         </main>
     </div>
 
+    <!-- MODAL MINI GAME HD & HADIAH RANDOM -->
     <div id="treasure-modal" class="modal-overlay hidden">
         <div class="modal-card">
             <button id="close-modal-btn" class="close-modal">&times;</button>
+
+            <!-- INTRO MODAL -->
             <div id="treasure-intro" class="modal-content-state">
                 <div class="treasure-chest-icon">
                     <i class="fa-solid fa-box-open"></i>
                 </div>
                 <h2>HARTA KARUN TERBUKA! 🏴‍☠️✨</h2>
-                <p>Selamat Nakama! Seluruh misi di peta pelayaran telah kamu selesaikan. Uji ketangkasan meriam bajak lautmu sekarang!</p>
+                <p>Selamat Nakama! Seluruh misi di peta pelayaran telah selesai. Kemudikan Kapal Thousand Sunny 3D dan hancurkan kapal musuh untuk mendapatkan Hadiah Rahasia!</p>
                 <button id="play-game-btn" class="btn-treasure">
-                    <i class="fa-solid fa-crosshairs"></i> BUKA PERTAHANAN MERIAM
+                    <i class="fa-solid fa-crosshairs"></i> MULAI PERTEMPURAN LAUT HD
                 </button>
             </div>
 
+            <!-- GAME CANVAS CONTAINER -->
             <div id="treasure-game-container" class="modal-content-state hidden">
                 <div class="game-header">
                     <div class="game-stat"><i class="fa-solid fa-clock"></i> <span id="game-timer-val">30</span>s</div>
                     <div class="game-stat"><i class="fa-solid fa-trophy"></i> <span id="game-score-val">0</span> Berry</div>
                 </div>
+                <p class="game-hint">🖱️ Geser Mouse / Keyboard [A/D] untuk Kemudi. Klik untuk Menembak Meriam!</p>
                 <div class="canvas-wrapper">
-                    <canvas id="gameCanvas" width="380" height="260"></canvas>
+                    <canvas id="gameCanvas" width="400" height="280"></canvas>
                 </div>
+
+                <!-- GAME OVER & REWARD BOX -->
                 <div id="game-over-box" class="game-over-box hidden">
-                    <h4 id="game-rank-title">Gelar: Rookie Pirate</h4>
+                    <h4 id="game-rank-title">Gelar: Supernova Captain</h4>
                     <p id="game-final-score">Poin Bounty: 0 Berry</p>
+                    
+                    <div id="reward-section" class="reward-section hidden">
+                        <div class="reward-badge"><i class="fa-solid fa-gift"></i> HADIAH RAHASIA DIDAPATKAN!</div>
+                        <h5 id="reward-title">Manga One Piece Chapter Terbaru</h5>
+                        <p id="reward-desc">Kamu memenangkan akses membaca Manga resmi di MangaPlus!</p>
+                        <a id="reward-link" href="#" target="_blank" class="btn-reward-link">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Hadiah Sekarang
+                        </a>
+                    </div>
                 </div>
+
                 <button id="restart-game-btn" class="btn-secondary">
                     <i class="fa-solid fa-rotate-right"></i> Main Lagi
                 </button>
