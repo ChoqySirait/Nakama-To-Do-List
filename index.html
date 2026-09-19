@@ -3,22 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏴‍☠To-Do List Nakama</title>
+    <title>🏴‍☠️ To-Do List Nakama</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div class="container">
-        <h1>Daftar Tugas 📝</h1>
+        <header class="header">
+            <h1>Daftar Tugas 📝</h1>
+            <p class="subtitle">Catat Petualanganmu, Nakama!</p>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-info">
+                <span>Progres Pelayaran</span>
+                <span id="progress-text">0% Selesai</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
         
-        <div class="input-group">
-            <input type="text" id="task-input" placeholder="Tambahkan Tugasmu Bro">
-            <button id="add-task-btn">Tambah</button>
+        <div class="input-card">
+            <div class="input-group">
+                <input type="text" id="task-input" placeholder="Tambahkan tugas barumu, Bro..." autocomplete="off">
+                <select id="priority-select" title="Pilih Prioritas Tugas">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High 🏴‍☠️</option>
+                </select>
+                <button id="add-task-btn"><i class="fa-solid fa-plus"></i> Tambah</button>
+            </div>
         </div>
         
         <div class="filter-group">
@@ -27,10 +48,21 @@
             <button class="filter-btn" data-filter="completed">Selesai</button>
         </div>
         
-        <ul id="todo-list">
-        </ul>
+        <div id="empty-state" class="empty-state">
+            <i class="fa-solid fa-compass"></i>
+            <p>Belum ada instruksi pelayaran. Tambahkan tugas baru!</p>
+        </div>
+
+        <ul id="todo-list"></ul>
+
+        <div class="stats-footer">
+            <span id="items-left">0 tugas tersisa</span>
+            <button id="clear-completed-btn" class="clear-btn">Bersihkan Selesai</button>
+        </div>
     </div>
     
+    <div id="toast-container" class="toast-container"></div>
+
     <p class="watermark">Roronoa Choqy S⚔︎</p>
     
     <script src="script.js"></script>
