@@ -12,32 +12,55 @@ const pendingCount = document.getElementById('pending-count');
 const clearCompletedBtn = document.getElementById('clear-completed-btn');
 const toastContainer = document.getElementById('toast-container');
 
+// Modal & Game Elements
+const treasureModal = document.getElementById('treasure-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const treasureIconBtn = document.getElementById('treasure-icon-btn');
+const treasureIntro = document.getElementById('treasure-intro');
+const treasureGameContainer = document.getElementById('treasure-game-container');
+const playGameBtn = document.getElementById('play-game-btn');
+const restartGameBtn = document.getElementById('restart-game-btn');
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const gameScoreVal = document.getElementById('game-score-val');
+
 let currentFilter = 'all';
 let searchQuery = '';
+let treasureUnlocked = false;
+let gameInterval, gameScore = 0, targetX = 0, targetY = 0, targetRadius = 20;
 
-// Web Audio API sintetis untuk SFX tanpa butuh file audio mp3 eksternal
+// SFX Synthesizer Audio
 function playSFX(type) {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const audioCtx = new AudioCtx();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioCtx.destination);
 
         if (type === 'add') {
-            osc.frequency.setValueAtTime(440, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
             osc.start();
-            osc.stop(ctx.currentTime + 0.15);
+            osc.stop(audioCtx.currentTime + 0.15);
         } else if (type === 'complete') {
-            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
             osc.start();
-            osc.stop(ctx.currentTime + 0.25);
+            osc.stop(audioCtx.currentTime + 0.25);
+        } else if (type === 'hit') {
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
         }
     } catch(e) {}
 }
@@ -135,7 +158,6 @@ function addTask() {
 }
 
 function toggleTask(id) {
-    let wasAllCompleted = false;
     const tasks = getTasks().map(t => {
         if (t.id === id) {
             const completed = !t.completed;
@@ -148,12 +170,21 @@ function toggleTask(id) {
     saveTasks(tasks);
     renderTasks();
 
-    // Trigger Confetti jika 100% Selesai
+    // Check Trigger Kejutan Harta Karun
     const total = tasks.length;
     const completedCount = tasks.filter(t => t.completed).length;
-    if (total > 0 && completedCount === total && typeof confetti === 'function') {
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        showToast('Luar Biasa! Seluruh Misi Selesai, Nakama! 🏴‍☠️✨', 'fa-trophy');
+
+    if (total > 0 && completedCount === total) {
+        treasureUnlocked = true;
+        treasureIconBtn.classList.remove('hidden');
+
+        if (typeof confetti === 'function') {
+            confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        }
+
+        setTimeout(() => {
+            openTreasureModal();
+        }, 600);
     }
 }
 
@@ -173,8 +204,15 @@ function updateProgress(tasks) {
     progressFill.style.width = `${percent}%`;
     progressText.textContent = `${percent}% Selesai`;
     pendingCount.textContent = pending;
+
+    if (total > 0 && completed === total) {
+        treasureIconBtn.classList.remove('hidden');
+    } else {
+        treasureIconBtn.classList.add('hidden');
+    }
 }
 
+// Drag and Drop
 function initDragAndDrop() {
     const items = todoList.querySelectorAll('.task-item');
     items.forEach(item => {
@@ -204,6 +242,62 @@ function saveNewOrder() {
     saveTasks(ordered);
 }
 
+// --- MINI GAME LOGIC (Cannon Target) ---
+function openTreasureModal() {
+    treasureIntro.classList.remove('hidden');
+    treasureGameContainer.classList.add('hidden');
+    treasureModal.classList.remove('hidden');
+}
+
+function closeTreasureModal() {
+    treasureModal.classList.add('hidden');
+    clearInterval(gameInterval);
+}
+
+function startMiniGame() {
+    treasureIntro.classList.add('hidden');
+    treasureGameContainer.classList.remove('hidden');
+    gameScore = 0;
+    gameScoreVal.textContent = gameScore;
+    nextTarget();
+    clearInterval(gameInterval);
+    gameInterval = setInterval(nextTarget, 1400);
+}
+
+function nextTarget() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    targetX = Math.random() * (canvas.width - 60) + 30;
+    targetY = Math.random() * (canvas.height - 60) + 30;
+
+    // Gambar Target Bajak Laut
+    ctx.beginPath();
+    ctx.arc(targetX, targetY, targetRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF5E36';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#FFD700';
+    ctx.stroke();
+
+    ctx.fillStyle = '#FFF';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🏴‍☠️', targetX, targetY + 5);
+}
+
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+
+    const dist = Math.hypot(clickX - targetX, clickY - targetY);
+    if (dist <= targetRadius) {
+        gameScore += 10;
+        gameScoreVal.textContent = gameScore;
+        playSFX('hit');
+        nextTarget();
+    }
+});
+
 function escapeHTML(str) {
     return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
@@ -228,5 +322,11 @@ clearCompletedBtn.addEventListener('click', () => {
     renderTasks();
     showToast('Misi selesai telah dibersihkan!', 'fa-broom');
 });
+
+// Modal Events
+treasureIconBtn.addEventListener('click', openTreasureModal);
+closeModalBtn.addEventListener('click', closeTreasureModal);
+playGameBtn.addEventListener('click', startMiniGame);
+restartGameBtn.addEventListener('click', startMiniGame);
 
 document.addEventListener('DOMContentLoaded', renderTasks);
