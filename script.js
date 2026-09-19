@@ -27,10 +27,15 @@ const gameScoreVal = document.getElementById('game-score-val');
 const gameOverBox = document.getElementById('game-over-box');
 const gameRankTitle = document.getElementById('game-rank-title');
 const gameFinalScore = document.getElementById('game-final-score');
+const rewardSection = document.getElementById('reward-section');
+const rewardTitle = document.getElementById('reward-title');
+const rewardDesc = document.getElementById('reward-desc');
+const rewardLink = document.getElementById('reward-link');
 
 let currentFilter = 'all';
 let searchQuery = '';
 
+// Game Variables
 let gameLoopId, gameTimerId;
 let timeLeft = 30;
 let score = 0;
@@ -38,6 +43,35 @@ let enemies = [];
 let particles = [];
 let cannonBalls = [];
 let waveOffset = 0;
+
+let shipX = 200;
+const shipY = 240;
+let aimAngle = -Math.PI / 2;
+let keys = { left: false, right: false };
+
+// POOL HADIAH RAHASIA REAL (LINK RESMI ONE PIECE)
+const REWARD_POOL = [
+    {
+        title: "📖 Manga One Piece Chapter Terbaru",
+        desc: "Akses membaca Manga resmi One Piece terjemahan Bahasa Indonesia di Shueisha MangaPlus!",
+        url: "https://mangaplus.shueisha.co.jp/titles/100020"
+    },
+    {
+        title: "📺 Anime One Piece Official Channel",
+        desc: "Tonton klip, trailer, dan episode pilihan One Piece di Channel YouTube Resmi One Piece!",
+        url: "https://www.youtube.com/@ONEPIECE_official"
+    },
+    {
+        title: "🎨 Live Wallpaper HD Thousand Sunny",
+        desc: "Wallpaper HD karya komunitas One Piece untuk mempercantik desktop/HP kamu!",
+        url: "https://wallhaven.cc/search?q=one+piece"
+    },
+    {
+        title: "🎵 Soundtrack Theme Luffy - Overtaken",
+        desc: "Dengarkan OST paling epic One Piece 'Overtaken' di YouTube!",
+        url: "https://www.youtube.com/results?search_query=one+piece+overtaken+ost"
+    }
+];
 
 function playSFX(type) {
     try {
@@ -65,12 +99,12 @@ function playSFX(type) {
             osc.stop(audioCtx.currentTime + 0.25);
         } else if (type === 'explode') {
             osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.2);
+            osc.frequency.setValueAtTime(160, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(25, audioCtx.currentTime + 0.25);
             gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
+            osc.stop(audioCtx.currentTime + 0.25);
         }
     } catch(e) {}
 }
@@ -249,7 +283,7 @@ function saveNewOrder() {
     saveTasks(ordered);
 }
 
-// --- ADVANCED GAME ENGINE (SUNNY DEFENSE) ---
+// --- ENGINE MINI GAME HD & HADIAH RANDOM ---
 function openTreasureModal() {
     treasureIntro.classList.remove('hidden');
     treasureGameContainer.classList.add('hidden');
@@ -265,9 +299,11 @@ function startMiniGame() {
     treasureIntro.classList.add('hidden');
     treasureGameContainer.classList.remove('hidden');
     gameOverBox.classList.add('hidden');
+    rewardSection.classList.add('hidden');
 
     score = 0;
     timeLeft = 30;
+    shipX = canvas.width / 2;
     enemies = [];
     particles = [];
     cannonBalls = [];
@@ -297,38 +333,46 @@ function stopGame() {
 function endGame() {
     stopGame();
     let title = 'Rookie Pirate 🏴‍☠️';
-    if (score >= 300) title = 'Yonko / Pirate King 👑';
-    else if (score >= 180) title = 'Supernova Captain ⚔️';
-    else if (score >= 80) title = 'Grand Line Navigator 🧭';
+    if (score >= 250) title = 'Yonko / Pirate King 👑';
+    else if (score >= 140) title = 'Supernova Captain ⚔️';
+    else if (score >= 60) title = 'Grand Line Navigator 🧭';
 
     gameRankTitle.textContent = `Gelar: ${title}`;
     gameFinalScore.textContent = `Poin Bounty Terkumpul: ${score} Berry`;
+
+    // BERIKAN HADIAH RAHASIA RANDOM
+    const randomReward = REWARD_POOL[Math.floor(Math.random() * REWARD_POOL.length)];
+    rewardTitle.textContent = randomReward.title;
+    rewardDesc.textContent = randomReward.desc;
+    rewardLink.href = randomReward.url;
+
+    rewardSection.classList.remove('hidden');
     gameOverBox.classList.remove('hidden');
 
     if (typeof confetti === 'function') {
-        confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
     }
 }
 
 function spawnEnemy() {
-    if (Math.random() < 0.04 && enemies.length < 5) {
+    if (Math.random() < 0.045 && enemies.length < 6) {
         enemies.push({
-            x: Math.random() * (canvas.width - 40) + 20,
+            x: Math.random() * (canvas.width - 60) + 30,
             y: -30,
-            size: 24,
-            speed: 1 + Math.random() * 1.5,
-            hp: 1
+            width: 32,
+            height: 24,
+            speed: 1.2 + Math.random() * 1.5
         });
     }
 }
 
 function createExplosion(x, y) {
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 18; i++) {
         particles.push({
             x, y,
-            vx: (Math.random() - 0.5) * 6,
-            vy: (Math.random() - 0.5) * 6,
-            radius: Math.random() * 3 + 1,
+            vx: (Math.random() - 0.5) * 7,
+            vy: (Math.random() - 0.5) * 7,
+            radius: Math.random() * 4 + 1.5,
             color: ['#FF5E36', '#FFD700', '#FFF', '#E74C3C'][Math.floor(Math.random() * 4)],
             alpha: 1
         });
@@ -338,55 +382,62 @@ function createExplosion(x, y) {
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Dynamic Wave Background
-    waveOffset += 0.05;
+    // Dynamic Wave Motion
+    waveOffset += 0.06;
     ctx.fillStyle = '#09121F';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#102542';
+    ctx.fillStyle = '#0E223D';
     ctx.beginPath();
     for (let x = 0; x <= canvas.width; x += 10) {
-        ctx.lineTo(x, 180 + Math.sin(x * 0.02 + waveOffset) * 8);
+        ctx.lineTo(x, 170 + Math.sin(x * 0.03 + waveOffset) * 6);
     }
     ctx.lineTo(canvas.width, canvas.height);
     ctx.lineTo(0, canvas.height);
     ctx.fill();
 
+    // Ship Movement Input
+    if (keys.left && shipX > 30) shipX -= 4;
+    if (keys.right && shipX < canvas.width - 30) shipX += 4;
+
     spawnEnemy();
 
-    // Render Cannon Balls
+    // Render Cannon Balls with Physics Vector
     cannonBalls.forEach((cb, index) => {
-        cb.y -= cb.speed;
+        cb.x += cb.vx;
+        cb.y += cb.vy;
+
         ctx.fillStyle = '#FFD700';
         ctx.beginPath();
         ctx.arc(cb.x, cb.y, 4, 0, Math.PI * 2);
         ctx.fill();
 
-        if (cb.y < 0) cannonBalls.splice(index, 1);
+        if (cb.y < 0 || cb.x < 0 || cb.x > canvas.width || cb.y > canvas.height) {
+            cannonBalls.splice(index, 1);
+        }
     });
 
     // Render Enemies (Navy Warships)
     enemies.forEach((enemy, eIndex) => {
         enemy.y += enemy.speed;
 
+        // Enemy Hull (Pseudo-3D)
+        ctx.fillStyle = '#8B0000';
+        ctx.fillRect(enemy.x - enemy.width / 2, enemy.y, enemy.width, enemy.height);
         ctx.fillStyle = '#E74C3C';
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.size / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#FFF';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        ctx.fillRect(enemy.x - enemy.width / 2 + 2, enemy.y + 2, enemy.width - 4, enemy.height - 4);
 
+        // Enemy Flag Symbol
         ctx.fillStyle = '#FFF';
         ctx.font = '12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('⚓', enemy.x, enemy.y + 4);
+        ctx.fillText('⚓', enemy.x, enemy.y + 16);
 
-        // Check Collision with Cannon Balls
+        // Collision Check
         cannonBalls.forEach((cb, cbIndex) => {
-            const dist = Math.hypot(cb.x - enemy.x, cb.y - enemy.y);
-            if (dist < enemy.size / 2 + 4) {
-                createExplosion(enemy.x, enemy.y);
+            if (cb.x > enemy.x - enemy.width/2 && cb.x < enemy.x + enemy.width/2 &&
+                cb.y > enemy.y && cb.y < enemy.y + enemy.height) {
+                createExplosion(enemy.x, enemy.y + enemy.height/2);
                 playSFX('explode');
                 enemies.splice(eIndex, 1);
                 cannonBalls.splice(cbIndex, 1);
@@ -395,9 +446,7 @@ function gameLoop() {
             }
         });
 
-        if (enemy.y > canvas.height) {
-            enemies.splice(eIndex, 1);
-        }
+        if (enemy.y > canvas.height) enemies.splice(eIndex, 1);
     });
 
     // Render Particles
@@ -415,30 +464,63 @@ function gameLoop() {
         if (p.alpha <= 0) particles.splice(pIndex, 1);
     });
 
-    // Draw Sunny Cannon (Player)
-    ctx.fillStyle = '#FFD700';
+    // RENDER THOUSAND SUNNY SHIP HD & ROTATING CANNON
+    ctx.save();
+    ctx.translate(shipX, shipY);
+
+    // Ship Hull
+    ctx.fillStyle = '#D4AC0D';
     ctx.beginPath();
-    ctx.arc(canvas.width / 2, canvas.height - 10, 20, 0, Math.PI * 2);
+    ctx.ellipse(0, 10, 24, 14, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Lion Figurehead
+    ctx.fillStyle = '#FF5E36';
+    ctx.beginPath();
+    ctx.arc(0, -6, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rotating Cannon Barrel
+    ctx.rotate(aimAngle + Math.PI / 2);
+    ctx.fillStyle = '#2C3E50';
+    ctx.fillRect(-3, -18, 6, 14);
+
+    ctx.restore();
 
     if (timeLeft > 0) {
         gameLoopId = requestAnimationFrame(gameLoop);
     }
 }
 
+// Controls: Mouse & Keyboard
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    shipX = mouseX; // Kapal mengikuti kursor mouse
+    aimAngle = Math.atan2(mouseY - shipY, mouseX - shipX);
+});
+
 canvas.addEventListener('click', (e) => {
     if (timeLeft <= 0) return;
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
+    const speed = 8;
     cannonBalls.push({
-        x: canvas.width / 2,
-        y: canvas.height - 20,
-        speed: 7,
-        targetX: clickX,
-        targetY: clickY
+        x: shipX,
+        y: shipY,
+        vx: Math.cos(aimAngle) * speed,
+        vy: Math.sin(aimAngle) * speed
     });
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+});
+
+window.addEventListener('keyup', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
 });
 
 function escapeHTML(str) {
