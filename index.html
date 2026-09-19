@@ -3,68 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏴‍☠️ To-Do List Nakama</title>
+    <title>🏴‍☠️ Nakama Quest Log | One Piece Edition</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Inline&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
-        <header class="header">
-            <h1>Daftar Tugas 📝</h1>
-            <p class="subtitle">Catat Petualanganmu, Nakama!</p>
-        </header>
+    <div class="app-layout">
+        <main class="container">
+            <header class="header">
+                <div class="brand-badge"><span>GRAND LINE QUEST</span></div>
+                <h1>DAFTAR TUGAS 📝</h1>
+                <p class="subtitle">Catat Petualangan & Misi Bajak Lautmu!</p>
+            </header>
 
-        <div class="progress-container">
-            <div class="progress-info">
-                <span>Progres Pelayaran</span>
-                <span id="progress-text">0% Selesai</span>
+            <div class="progress-card">
+                <div class="progress-info">
+                    <span><i class="fa-solid fa-ship"></i> Progres Pelayaran</span>
+                    <span id="progress-text" class="status-highlight">0% Selesai</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
             </div>
-            <div class="progress-bar">
-                <div id="progress-fill" class="progress-fill"></div>
-            </div>
-        </div>
-        
-        <div class="input-card">
-            <div class="input-group">
-                <input type="text" id="task-input" placeholder="Tambahkan tugas barumu, Bro..." autocomplete="off">
-                <select id="priority-select" title="Pilih Prioritas Tugas">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High 🏴‍☠️</option>
-                </select>
-                <button id="add-task-btn"><i class="fa-solid fa-plus"></i> Tambah</button>
-            </div>
-        </div>
-        
-        <div class="filter-group">
-            <button class="filter-btn active" data-filter="all">Semua</button>
-            <button class="filter-btn" data-filter="pending">Belum Selesai</button>
-            <button class="filter-btn" data-filter="completed">Selesai</button>
-        </div>
-        
-        <div id="empty-state" class="empty-state">
-            <i class="fa-solid fa-compass"></i>
-            <p>Belum ada instruksi pelayaran. Tambahkan tugas baru!</p>
-        </div>
 
-        <ul id="todo-list"></ul>
+            <div class="input-card">
+                <div class="input-row main-row">
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-scroll input-icon"></i>
+                        <input type="text" id="task-input" placeholder="Tuliskan misi barumu, Nakama..." autocomplete="off">
+                    </div>
+                    <button id="add-task-btn" class="btn-primary">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Tambah</span>
+                    </button>
+                </div>
+                <div class="input-row sub-row">
+                    <div class="select-wrapper">
+                        <i class="fa-solid fa-skull"></i>
+                        <select id="priority-select" title="Prioritas Misi">
+                            <option value="low">Low Bounty</option>
+                            <option value="medium" selected>Medium Bounty</option>
+                            <option value="high">High Bounty 🏴‍☠️</option>
+                        </select>
+                    </div>
+                    <div class="date-wrapper">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <input type="date" id="due-date-input" title="Tenggat Waktu">
+                    </div>
+                </div>
+            </div>
 
-        <div class="stats-footer">
-            <span id="items-left">0 tugas tersisa</span>
-            <button id="clear-completed-btn" class="clear-btn">Bersihkan Selesai</button>
-        </div>
+            <div class="control-bar">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-input" placeholder="Cari misi...">
+                </div>
+                <div class="filter-group">
+                    <button class="filter-btn active" data-filter="all">Semua</button>
+                    <button class="filter-btn" data-filter="pending">Belum</button>
+                    <button class="filter-btn" data-filter="completed">Selesai</button>
+                </div>
+            </div>
+
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon-wrapper">
+                    <i class="fa-solid fa-anchor"></i>
+                </div>
+                <h3>Belum Ada Misi Ditambahkan!</h3>
+                <p>Laut tenang tanpa rintangan. Tambahkan tugas baru untuk memulai pelayaran!</p>
+            </div>
+
+            <ul id="todo-list" class="todo-list"></ul>
+
+            <footer class="stats-footer">
+                <span id="items-left"><strong id="pending-count">0</strong> misi tersisa</span>
+                <button id="clear-completed-btn" class="clear-btn">
+                    <i class="fa-solid fa-broom"></i> Bersihkan Selesai
+                </button>
+            </footer>
+        </main>
     </div>
-    
-    <div id="toast-container" class="toast-container"></div>
 
-    <p class="watermark">Roronoa Choqy S⚔︎</p>
-    
+    <div id="toast-container" class="toast-container"></div>
+    <p class="watermark">Roronoa Choqy S ⚔︎</p>
+
     <script src="script.js"></script>
 </body>
 </html>
