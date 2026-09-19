@@ -1,8 +1,27 @@
 const taskInput = document.getElementById('task-input');
+const prioritySelect = document.getElementById('priority-select');
 const addTaskBtn = document.getElementById('add-task-btn');
 const todoList = document.getElementById('todo-list');
 const filterBtns = document.querySelectorAll('.filter-btn');
+const emptyState = document.getElementById('empty-state');
+const progressFill = document.getElementById('progress-fill');
+const progressText = document.getElementById('progress-text');
+const itemsLeft = document.getElementById('items-left');
+const clearCompletedBtn = document.getElementById('clear-completed-btn');
+const toastContainer = document.getElementById('toast-container');
+
 let currentFilter = 'all';
+
+function showToast(message, icon = 'fa-circle-info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
 
 function getTasks() {
     const tasks = localStorage.getItem('tasks');
@@ -13,179 +32,194 @@ function saveTasks(tasks) {
     localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-function updateTaskText(oldText, newText) {
-    const tasks = getTasks();
-    const updatedTasks = tasks.map(task => {
-        if (task.text === oldText) {
-            return { ...task, text: newText.trim() };
-        }
-        return task;
-    });
-    saveTasks(updatedTasks);
-    renderTasks();
-}
-
-function createTaskElement(taskText, isCompleted) {
-    const listItem = document.createElement('li');
-    listItem.classList.add('task-item');
-    if (isCompleted) {
-        listItem.classList.add('completed');
-    }
-
-    const taskSpan = document.createElement('span');
-    taskSpan.textContent = taskText;
-    
-    if (!isCompleted) {
-        taskSpan.addEventListener('dblclick', function() {
-            const inputEdit = document.createElement('input');
-            inputEdit.type = 'text';
-            inputEdit.value = taskText;
-            inputEdit.classList.add('task-edit-input');
-            
-            listItem.replaceChild(inputEdit, taskSpan);
-            inputEdit.focus();
-
-            const handleUpdate = () => {
-                const newText = inputEdit.value;
-                if (newText.trim() && newText !== taskText) {
-                    updateTaskText(taskText, newText);
-                } else {
-                    listItem.replaceChild(taskSpan, inputEdit);
-                }
-            };
-
-            inputEdit.addEventListener('blur', handleUpdate);
-            inputEdit.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handleUpdate();
-                }
-            });
-        });
-    }
-
-    const actionGroup = document.createElement('div');
-    actionGroup.classList.add('action-group');
-    
-    const toggleBtn = document.createElement('button');
-    toggleBtn.classList.add('toggle-btn');
-    
-    toggleBtn.innerHTML = isCompleted 
-        ? '<i class="fa-solid fa-check"></i>'
-        : '<i class="fa-regular fa-circle"></i>';
-
-    toggleBtn.addEventListener('click', function() {
-        toggleComplete(taskText);
-    });
-    
-    const deleteBtn = document.createElement('button');
-    deleteBtn.classList.add('delete-btn');
-    deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>'; 
-    deleteBtn.setAttribute('aria-label', `Hapus tugas: ${taskText}`);
-    
-    deleteBtn.addEventListener('click', function() {
-        deleteTask(taskText, listItem); 
-    });
-
-    actionGroup.appendChild(toggleBtn);
-    actionGroup.appendChild(deleteBtn);
-
-    listItem.appendChild(taskSpan);
-    listItem.appendChild(actionGroup);
-    
-    return listItem;
-}
-
-function filterTasks(filter) {
-    currentFilter = filter;
-    renderTasks();
-}
-
 function renderTasks() {
     todoList.innerHTML = '';
     const tasks = getTasks();
-    
+
     const filteredTasks = tasks.filter(task => {
-        if (currentFilter === 'pending') {
-            return !task.completed;
-        } else if (currentFilter === 'completed') {
-            return task.completed;
-        }
+        if (currentFilter === 'pending') return !task.completed;
+        if (currentFilter === 'completed') return task.completed;
         return true;
     });
-    
-    filteredTasks.forEach(task => {
-        const item = createTaskElement(task.text, task.completed);
-        todoList.appendChild(item);
-    });
 
-    filterBtns.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.filter === currentFilter) {
-            btn.classList.add('active');
+    if (filteredTasks.length === 0) {
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+        filteredTasks.forEach(task => {
+            const item = createTaskElement(task);
+            todoList.appendChild(item);
+        });
+    }
+
+    updateStats(tasks);
+}
+
+function createTaskElement(task) {
+    const listItem = document.createElement('li');
+    listItem.classList.add('task-item');
+    if (task.completed) listItem.classList.add('completed');
+
+    listItem.innerHTML = `
+        <div class="task-main">
+            <button class="toggle-btn" aria-label="Toggle Selesai">
+                <i class="${task.completed ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle'}"></i>
+            </button>
+            <span class="task-text">${escapeHTML(task.text)}</span>
+            <span class="priority-badge ${task.priority}">${task.priority}</span>
+        </div>
+        <div class="action-group">
+            <button class="delete-btn" aria-label="Hapus Tugas">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
+        </div>
+    `;
+
+    const toggleBtn = listItem.querySelector('.toggle-btn');
+    toggleBtn.addEventListener('click', () => toggleTaskComplete(task.id));
+
+    const deleteBtn = listItem.querySelector('.delete-btn');
+    deleteBtn.addEventListener('click', () => deleteTask(task.id, listItem));
+
+    const taskTextSpan = listItem.querySelector('.task-text');
+    taskTextSpan.addEventListener('dblclick', () => enableTaskEdit(task, taskTextSpan, listItem));
+
+    return listItem;
+}
+
+function enableTaskEdit(task, textSpan, listItem) {
+    if (task.completed) return;
+
+    const inputEdit = document.createElement('input');
+    inputEdit.type = 'text';
+    inputEdit.value = task.text;
+    inputEdit.className = 'input-group';
+    inputEdit.style.padding = '4px 8px';
+
+    textSpan.replaceWith(inputEdit);
+    inputEdit.focus();
+
+    const saveEdit = () => {
+        const newText = inputEdit.value.trim();
+        if (newText && newText !== task.text) {
+            updateTaskText(task.id, newText);
+            showToast('Tugas diperbarui!', 'fa-pen-to-square');
+        } else {
+            renderTasks();
         }
+    };
+
+    inputEdit.addEventListener('blur', saveEdit);
+    inputEdit.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') saveEdit();
     });
 }
 
 function addTask() {
     const text = taskInput.value.trim();
-    if (text === '') {
-        alert('Tugas tidak boleh kosong!');
+    const priority = prioritySelect.value;
+
+    if (!text) {
+        showToast('Tugas tidak boleh kosong!', 'fa-triangle-exclamation');
         return;
     }
 
     const tasks = getTasks();
-    
-    if (tasks.some(task => task.text.toLowerCase() === text.toLowerCase())) {
-        alert('Tugas ini sudah ada dalam daftar!');
-        return;
-    }
-    
-    tasks.push({ text: text, completed: false });
+    const newTask = {
+        id: crypto.randomUUID(),
+        text: text,
+        priority: priority,
+        completed: false
+    };
+
+    tasks.push(newTask);
     saveTasks(tasks);
+
     taskInput.value = '';
     renderTasks();
+    showToast('Tugas baru ditambahkan!', 'fa-circle-check');
 }
 
-function toggleComplete(taskText) {
-    const tasks = getTasks();
-    const updatedTasks = tasks.map(task => {
-        if (task.text === taskText) {
+function toggleTaskComplete(id) {
+    const tasks = getTasks().map(task => {
+        if (task.id === id) {
             return { ...task, completed: !task.completed };
         }
         return task;
     });
-    saveTasks(updatedTasks);
-    
-    if (currentFilter !== 'all') {
-        renderTasks(); 
-    } else {
-        renderTasks();
-    }
+
+    saveTasks(tasks);
+    renderTasks();
 }
 
-function deleteTask(taskText, listItem) {
+function updateTaskText(id, newText) {
+    const tasks = getTasks().map(task => {
+        if (task.id === id) {
+            return { ...task, text: newText };
+        }
+        return task;
+    });
+
+    saveTasks(tasks);
+    renderTasks();
+}
+
+function deleteTask(id, listItem) {
     listItem.classList.add('fade-out');
-    
     setTimeout(() => {
-        const tasks = getTasks().filter(task => task.text !== taskText);
+        const tasks = getTasks().filter(task => task.id !== id);
         saveTasks(tasks);
-        
         renderTasks();
-    }, 400);
+        showToast('Tugas dihapus!', 'fa-trash-can');
+    }, 300);
 }
 
-addTaskBtn.addEventListener('click', addTask);
+function clearCompletedTasks() {
+    const tasks = getTasks();
+    const activeTasks = tasks.filter(task => !task.completed);
 
-taskInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        addTask();
+    if (tasks.length === activeTasks.length) {
+        showToast('Tidak ada tugas selesai untuk dibersihkan.', 'fa-circle-info');
+        return;
     }
+
+    saveTasks(activeTasks);
+    renderTasks();
+    showToast('Tugas selesai dibersihkan!', 'fa-broom');
+}
+
+function updateStats(tasks) {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    const pending = total - completed;
+
+    const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    progressFill.style.width = `${percentage}%`;
+    progressText.textContent = `${percentage}% Selesai`;
+    itemsLeft.textContent = `${pending} tugas tersisa`;
+}
+
+function escapeHTML(str) {
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
+
+// Event Listeners
+addTaskBtn.addEventListener('click', addTask);
+taskInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addTask();
 });
 
 filterBtns.forEach(btn => {
     btn.addEventListener('click', function() {
-        filterTasks(this.dataset.filter);
+        filterBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter;
+        renderTasks();
     });
 });
 
+clearCompletedBtn.addEventListener('click', clearCompletedTasks);
 document.addEventListener('DOMContentLoaded', renderTasks);
