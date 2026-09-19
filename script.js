@@ -1,216 +1,217 @@
 const taskInput = document.getElementById('task-input');
 const prioritySelect = document.getElementById('priority-select');
+const dueDateInput = document.getElementById('due-date-input');
 const addTaskBtn = document.getElementById('add-task-btn');
 const todoList = document.getElementById('todo-list');
 const filterBtns = document.querySelectorAll('.filter-btn');
+const searchInput = document.getElementById('search-input');
 const emptyState = document.getElementById('empty-state');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
-const itemsLeft = document.getElementById('items-left');
+const pendingCount = document.getElementById('pending-count');
 const clearCompletedBtn = document.getElementById('clear-completed-btn');
 const toastContainer = document.getElementById('toast-container');
 
 let currentFilter = 'all';
+let searchQuery = '';
 
-function showToast(message, icon = 'fa-circle-info') {
+// Web Audio API sintetis untuk SFX tanpa butuh file audio mp3 eksternal
+function playSFX(type) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'add') {
+            osc.frequency.setValueAtTime(440, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        } else if (type === 'complete') {
+            osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+            osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.25);
+        }
+    } catch(e) {}
+}
+
+function showToast(msg, icon = 'fa-compass') {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid ${icon}" style="color: var(--gold-glow);"></i> <span>${msg}</span>`;
     toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    setTimeout(() => toast.remove(), 2800);
 }
 
 function getTasks() {
-    const tasks = localStorage.getItem('tasks');
-    return tasks ? JSON.parse(tasks) : [];
+    return JSON.parse(localStorage.getItem('tasks_nakama_v2')) || [];
 }
 
 function saveTasks(tasks) {
-    localStorage.setItem('tasks', JSON.stringify(tasks));
+    localStorage.setItem('tasks_nakama_v2', JSON.stringify(tasks));
 }
 
 function renderTasks() {
     todoList.innerHTML = '';
     const tasks = getTasks();
 
-    const filteredTasks = tasks.filter(task => {
-        if (currentFilter === 'pending') return !task.completed;
-        if (currentFilter === 'completed') return task.completed;
-        return true;
+    const filtered = tasks.filter(t => {
+        const matchesFilter = (currentFilter === 'pending') ? !t.completed :
+                              (currentFilter === 'completed') ? t.completed : true;
+        const matchesSearch = t.text.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesFilter && matchesSearch;
     });
 
-    if (filteredTasks.length === 0) {
+    if (filtered.length === 0) {
         emptyState.style.display = 'block';
     } else {
         emptyState.style.display = 'none';
-        filteredTasks.forEach(task => {
-            const item = createTaskElement(task);
-            todoList.appendChild(item);
-        });
+        filtered.forEach(t => todoList.appendChild(createTaskElement(t)));
     }
 
-    updateStats(tasks);
+    updateProgress(tasks);
+    initDragAndDrop();
 }
 
 function createTaskElement(task) {
-    const listItem = document.createElement('li');
-    listItem.classList.add('task-item');
-    if (task.completed) listItem.classList.add('completed');
+    const li = document.createElement('li');
+    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+    li.draggable = true;
+    li.dataset.id = task.id;
 
-    listItem.innerHTML = `
-        <div class="task-main">
-            <button class="toggle-btn" aria-label="Toggle Selesai">
-                <i class="${task.completed ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle'}"></i>
+    const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '';
+
+    li.innerHTML = `
+        <div class="task-left">
+            <button class="check-btn" aria-label="Tandai Selesai">
+                <i class="fa-solid fa-check"></i>
             </button>
-            <span class="task-text">${escapeHTML(task.text)}</span>
-            <span class="priority-badge ${task.priority}">${task.priority}</span>
+            <div class="task-details">
+                <span class="task-text">${escapeHTML(task.text)}</span>
+                <div class="task-meta">
+                    <span class="bounty-badge ${task.priority}">${task.priority}</span>
+                    ${formattedDate ? `<span class="due-tag"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>` : ''}
+                </div>
+            </div>
         </div>
-        <div class="action-group">
-            <button class="delete-btn" aria-label="Hapus Tugas">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        </div>
+        <button class="delete-btn" aria-label="Hapus Misi">
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
     `;
 
-    const toggleBtn = listItem.querySelector('.toggle-btn');
-    toggleBtn.addEventListener('click', () => toggleTaskComplete(task.id));
+    li.querySelector('.check-btn').addEventListener('click', () => toggleTask(task.id));
+    li.querySelector('.delete-btn').addEventListener('click', () => deleteTask(task.id));
 
-    const deleteBtn = listItem.querySelector('.delete-btn');
-    deleteBtn.addEventListener('click', () => deleteTask(task.id, listItem));
-
-    const taskTextSpan = listItem.querySelector('.task-text');
-    taskTextSpan.addEventListener('dblclick', () => enableTaskEdit(task, taskTextSpan, listItem));
-
-    return listItem;
-}
-
-function enableTaskEdit(task, textSpan, listItem) {
-    if (task.completed) return;
-
-    const inputEdit = document.createElement('input');
-    inputEdit.type = 'text';
-    inputEdit.value = task.text;
-    inputEdit.className = 'input-group';
-    inputEdit.style.padding = '4px 8px';
-
-    textSpan.replaceWith(inputEdit);
-    inputEdit.focus();
-
-    const saveEdit = () => {
-        const newText = inputEdit.value.trim();
-        if (newText && newText !== task.text) {
-            updateTaskText(task.id, newText);
-            showToast('Tugas diperbarui!', 'fa-pen-to-square');
-        } else {
-            renderTasks();
-        }
-    };
-
-    inputEdit.addEventListener('blur', saveEdit);
-    inputEdit.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') saveEdit();
-    });
+    return li;
 }
 
 function addTask() {
     const text = taskInput.value.trim();
-    const priority = prioritySelect.value;
-
-    if (!text) {
-        showToast('Tugas tidak boleh kosong!', 'fa-triangle-exclamation');
-        return;
-    }
+    if (!text) return showToast('Isikan rincian misimu dahulu!', 'fa-exclamation-circle');
 
     const tasks = getTasks();
     const newTask = {
         id: crypto.randomUUID(),
-        text: text,
-        priority: priority,
+        text,
+        priority: prioritySelect.value,
+        dueDate: dueDateInput.value,
         completed: false
     };
 
-    tasks.push(newTask);
+    tasks.unshift(newTask);
     saveTasks(tasks);
 
     taskInput.value = '';
     renderTasks();
-    showToast('Tugas baru ditambahkan!', 'fa-circle-check');
+    playSFX('add');
+    showToast('Misi baru tercatat di peta!', 'fa-scroll');
 }
 
-function toggleTaskComplete(id) {
-    const tasks = getTasks().map(task => {
-        if (task.id === id) {
-            return { ...task, completed: !task.completed };
+function toggleTask(id) {
+    let wasAllCompleted = false;
+    const tasks = getTasks().map(t => {
+        if (t.id === id) {
+            const completed = !t.completed;
+            if (completed) playSFX('complete');
+            return { ...t, completed };
         }
-        return task;
+        return t;
     });
 
     saveTasks(tasks);
     renderTasks();
-}
 
-function updateTaskText(id, newText) {
-    const tasks = getTasks().map(task => {
-        if (task.id === id) {
-            return { ...task, text: newText };
-        }
-        return task;
-    });
-
-    saveTasks(tasks);
-    renderTasks();
-}
-
-function deleteTask(id, listItem) {
-    listItem.classList.add('fade-out');
-    setTimeout(() => {
-        const tasks = getTasks().filter(task => task.id !== id);
-        saveTasks(tasks);
-        renderTasks();
-        showToast('Tugas dihapus!', 'fa-trash-can');
-    }, 300);
-}
-
-function clearCompletedTasks() {
-    const tasks = getTasks();
-    const activeTasks = tasks.filter(task => !task.completed);
-
-    if (tasks.length === activeTasks.length) {
-        showToast('Tidak ada tugas selesai untuk dibersihkan.', 'fa-circle-info');
-        return;
+    // Trigger Confetti jika 100% Selesai
+    const total = tasks.length;
+    const completedCount = tasks.filter(t => t.completed).length;
+    if (total > 0 && completedCount === total && typeof confetti === 'function') {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        showToast('Luar Biasa! Seluruh Misi Selesai, Nakama! 🏴‍☠️✨', 'fa-trophy');
     }
-
-    saveTasks(activeTasks);
-    renderTasks();
-    showToast('Tugas selesai dibersihkan!', 'fa-broom');
 }
 
-function updateStats(tasks) {
+function deleteTask(id) {
+    const tasks = getTasks().filter(t => t.id !== id);
+    saveTasks(tasks);
+    renderTasks();
+    showToast('Misi dihapus dari logbook.', 'fa-trash');
+}
+
+function updateProgress(tasks) {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
     const pending = total - completed;
+    const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-    const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
+    progressFill.style.width = `${percent}%`;
+    progressText.textContent = `${percent}% Selesai`;
+    pendingCount.textContent = pending;
+}
 
-    progressFill.style.width = `${percentage}%`;
-    progressText.textContent = `${percentage}% Selesai`;
-    itemsLeft.textContent = `${pending} tugas tersisa`;
+function initDragAndDrop() {
+    const items = todoList.querySelectorAll('.task-item');
+    items.forEach(item => {
+        item.addEventListener('dragstart', () => item.classList.add('dragging'));
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            saveNewOrder();
+        });
+    });
+
+    todoList.addEventListener('dragover', e => {
+        e.preventDefault();
+        const dragging = document.querySelector('.dragging');
+        if (!dragging) return;
+        const siblings = [...todoList.querySelectorAll('.task-item:not(.dragging)')];
+        const nextSibling = siblings.find(sibling => {
+            return e.clientY <= sibling.getBoundingClientRect().top + sibling.offsetHeight / 2;
+        });
+        todoList.insertBefore(dragging, nextSibling);
+    });
+}
+
+function saveNewOrder() {
+    const itemIds = [...todoList.querySelectorAll('.task-item')].map(el => el.dataset.id);
+    const tasks = getTasks();
+    const ordered = itemIds.map(id => tasks.find(t => t.id === id)).filter(Boolean);
+    saveTasks(ordered);
 }
 
 function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
+    return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
 // Event Listeners
 addTaskBtn.addEventListener('click', addTask);
-taskInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') addTask();
-});
+taskInput.addEventListener('keypress', e => e.key === 'Enter' && addTask());
+searchInput.addEventListener('input', e => { searchQuery = e.target.value; renderTasks(); });
 
 filterBtns.forEach(btn => {
     btn.addEventListener('click', function() {
@@ -221,5 +222,11 @@ filterBtns.forEach(btn => {
     });
 });
 
-clearCompletedBtn.addEventListener('click', clearCompletedTasks);
+clearCompletedBtn.addEventListener('click', () => {
+    const active = getTasks().filter(t => !t.completed);
+    saveTasks(active);
+    renderTasks();
+    showToast('Misi selesai telah dibersihkan!', 'fa-broom');
+});
+
 document.addEventListener('DOMContentLoaded', renderTasks);
