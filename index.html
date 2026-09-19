@@ -18,7 +18,12 @@
     <div class="app-layout">
         <main class="container">
             <header class="header">
-                <div class="brand-badge"><span>GRAND LINE QUEST</span></div>
+                <div class="header-top">
+                    <div class="brand-badge"><span>GRAND LINE QUEST</span></div>
+                    <button id="treasure-icon-btn" class="treasure-icon-btn hidden" title="Buka Mini Game Harta Karun">
+                        <i class="fa-solid fa-gem"></i>
+                    </button>
+                </div>
                 <h1>DAFTAR TUGAS 📝</h1>
                 <p class="subtitle">Catat Petualangan & Misi Bajak Lautmu!</p>
             </header>
@@ -89,6 +94,37 @@
                 </button>
             </footer>
         </main>
+    </div>
+
+    <!-- MODAL KEJUTAN HARTA KARUN & MINI GAME -->
+    <div id="treasure-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <button id="close-modal-btn" class="close-modal">&times;</button>
+            <div id="treasure-intro" class="modal-content-state">
+                <div class="treasure-chest-icon">
+                    <i class="fa-solid fa-box-open"></i>
+                </div>
+                <h2>HARTA KARUN TERBUKA! 🏴‍☠️✨</h2>
+                <p>Selamat Nakama! Seluruh misi di peta pelayaran telah kamu selesaikan. Kamu berhak atas hadiah hiburan bajak laut!</p>
+                <button id="play-game-btn" class="btn-treasure">
+                    <i class="fa-solid fa-gamepad"></i> MAINKAN MINI GAME BAJAK LAUT
+                </button>
+            </div>
+
+            <div id="treasure-game-container" class="modal-content-state hidden">
+                <div class="game-header">
+                    <h3>🎯 Tembak Sasaran Meriam!</h3>
+                    <div class="game-score">Skor: <span id="game-score-val">0</span></div>
+                </div>
+                <p class="game-instruction">Klik/sentuh target bajak laut yang muncul sebelum menghilang!</p>
+                <div class="canvas-wrapper">
+                    <canvas id="gameCanvas" width="360" height="240"></canvas>
+                </div>
+                <button id="restart-game-btn" class="btn-secondary">
+                    <i class="fa-solid fa-rotate-right"></i> Main Lagi
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="toast-container" class="toast-container"></div>
