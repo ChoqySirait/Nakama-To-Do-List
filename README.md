@@ -53,3 +53,5 @@ Ikuti langkah-langkah sederhana ini untuk melihat aplikasi ini secara lokal di k
 Proyek ini dibuat oleh:
 
 -   **ChoqySirait** (GitHub: [@ChoqySirait](https://github.com/ChoqySirait))
+
+## Gonna Redesign Soon!
