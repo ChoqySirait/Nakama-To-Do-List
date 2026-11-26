@@ -55,3 +55,4 @@ Proyek ini dibuat oleh:
 -   **ChoqySirait** (GitHub: [@ChoqySirait](https://github.com/ChoqySirait))
 
 ## Gonna Redesign Soon!
+LESGOOOO
