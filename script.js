@@ -32,8 +32,15 @@ const rewardTitle = document.getElementById('reward-title');
 const rewardDesc = document.getElementById('reward-desc');
 const rewardLink = document.getElementById('reward-link');
 
+const STORAGE_KEY = 'tasks_nakama_v2';
+const RECOVERY_STORAGE_KEY = 'tasks_nakama_v2_recovery';
+const MAX_TASK_LENGTH = 200;
+const VALID_PRIORITIES = new Set(['low', 'medium', 'high']);
+
 let currentFilter = 'all';
 let searchQuery = '';
+let hasNotifiedStorageIssue = false;
+let isDragAndDropInitialized = false;
 
 // Game Variables
 let gameLoopId, gameTimerId;
@@ -112,21 +119,150 @@ function playSFX(type) {
 function showToast(msg, icon = 'fa-compass') {
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<i class="fa-solid ${icon}" style="color: var(--gold-glow);"></i> <span>${msg}</span>`;
+
+    const safeIcon = /^[a-z0-9-]+$/i.test(String(icon)) ? icon : 'fa-compass';
+    const iconEl = document.createElement('i');
+    iconEl.className = `fa-solid ${safeIcon}`;
+    iconEl.style.color = 'var(--gold-glow)';
+
+    const textEl = document.createElement('span');
+    textEl.textContent = String(msg);
+
+    toast.append(iconEl, ' ', textEl);
     toastContainer.appendChild(toast);
     setTimeout(() => toast.remove(), 2800);
 }
 
+function generateTaskId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `task-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeTask(item) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const text = typeof item.text === 'string' ? item.text.trim() : '';
+    if (!id || !text) return null;
+
+    const priority = VALID_PRIORITIES.has(item.priority) ? item.priority : 'medium';
+    const dueDate = typeof item.dueDate === 'string' ? item.dueDate : '';
+    const completed = Boolean(item.completed);
+
+    return {
+        id,
+        text: text.slice(0, MAX_TASK_LENGTH),
+        priority,
+        dueDate,
+        completed
+    };
+}
+
+function backupCorruptedStorage(rawValue) {
+    try {
+        localStorage.setItem(RECOVERY_STORAGE_KEY, rawValue);
+    } catch (e) {
+        // Abaikan jika penyimpanan penuh/ditolak saat mencadangkan
+    }
+}
+
+function notifyStorageIssueOnce(message) {
+    if (hasNotifiedStorageIssue) return;
+    hasNotifiedStorageIssue = true;
+    showToast(message, 'fa-exclamation-triangle');
+}
+
 function getTasks() {
-    return JSON.parse(localStorage.getItem('tasks_nakama_v2')) || [];
+    let raw;
+    try {
+        raw = localStorage.getItem(STORAGE_KEY);
+    } catch (e) {
+        notifyStorageIssueOnce('Gagal mengakses penyimpanan lokal.');
+        return [];
+    }
+
+    if (!raw) return [];
+
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (e) {
+        backupCorruptedStorage(raw);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        } catch (writeErr) {
+            // Tetap kembalikan array kosong agar aplikasi tetap berjalan
+        }
+        notifyStorageIssueOnce('Data rusak ditemukan, dicadangkan & dipulihkan.');
+        return [];
+    }
+
+    if (!Array.isArray(parsed)) {
+        backupCorruptedStorage(raw);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        } catch (writeErr) {
+            // Tetap kembalikan array kosong
+        }
+        notifyStorageIssueOnce('Format data tidak valid, dicadangkan & dipulihkan.');
+        return [];
+    }
+
+    const validTasks = [];
+    let hasInvalidItem = false;
+
+    for (const item of parsed) {
+        const normalized = normalizeTask(item);
+        if (normalized) {
+            validTasks.push(normalized);
+        } else {
+            hasInvalidItem = true;
+        }
+    }
+
+    if (hasInvalidItem) {
+        backupCorruptedStorage(raw);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(validTasks));
+        } catch (writeErr) {
+            // Tetap gunakan data valid di memori
+        }
+        notifyStorageIssueOnce('Sebagian data tidak valid telah dicadangkan & dibersihkan.');
+    }
+
+    return validTasks;
 }
 
 function saveTasks(tasks) {
-    localStorage.setItem('tasks_nakama_v2', JSON.stringify(tasks));
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        return true;
+    } catch (e) {
+        const isQuotaError = e && (
+            e.name === 'QuotaExceededError' ||
+            e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+            e.code === 22 ||
+            e.code === 1014
+        );
+        const msg = isQuotaError
+            ? 'Penyimpanan penuh! Hapus beberapa misi terlebih dahulu.'
+            : 'Gagal menyimpan data ke penyimpanan lokal!';
+        showToast(msg, 'fa-exclamation-triangle');
+        return false;
+    }
+}
+
+function formatDueDate(dueDate) {
+    if (!dueDate || typeof dueDate !== 'string') return '';
+    const parsed = new Date(dueDate);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
 function renderTasks() {
-    todoList.innerHTML = '';
+    todoList.replaceChildren();
     const tasks = getTasks();
 
     const filtered = tasks.filter(t => {
@@ -144,7 +280,6 @@ function renderTasks() {
     }
 
     updateProgress(tasks);
-    initDragAndDrop();
 }
 
 function createTaskElement(task) {
@@ -153,28 +288,60 @@ function createTaskElement(task) {
     li.draggable = true;
     li.dataset.id = task.id;
 
-    const formattedDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '';
+    const taskLeft = document.createElement('div');
+    taskLeft.className = 'task-left';
 
-    li.innerHTML = `
-        <div class="task-left">
-            <button class="check-btn" aria-label="Tandai Selesai">
-                <i class="fa-solid fa-check"></i>
-            </button>
-            <div class="task-details">
-                <span class="task-text">${escapeHTML(task.text)}</span>
-                <div class="task-meta">
-                    <span class="bounty-badge ${task.priority}">${task.priority}</span>
-                    ${formattedDate ? `<span class="due-tag"><i class="fa-regular fa-clock"></i> ${formattedDate}</span>` : ''}
-                </div>
-            </div>
-        </div>
-        <button class="delete-btn" aria-label="Hapus Misi">
-            <i class="fa-solid fa-trash-can"></i>
-        </button>
-    `;
+    const checkBtn = document.createElement('button');
+    checkBtn.className = 'check-btn';
+    checkBtn.setAttribute('aria-label', 'Tandai Selesai');
+    const checkIcon = document.createElement('i');
+    checkIcon.className = 'fa-solid fa-check';
+    checkBtn.appendChild(checkIcon);
 
-    li.querySelector('.check-btn').addEventListener('click', () => toggleTask(task.id));
-    li.querySelector('.delete-btn').addEventListener('click', () => deleteTask(task.id));
+    const taskDetails = document.createElement('div');
+    taskDetails.className = 'task-details';
+
+    const taskText = document.createElement('span');
+    taskText.className = 'task-text';
+    taskText.textContent = task.text;
+
+    const taskMeta = document.createElement('div');
+    taskMeta.className = 'task-meta';
+
+    const bountyBadge = document.createElement('span');
+    bountyBadge.className = `bounty-badge ${task.priority}`;
+    bountyBadge.textContent = task.priority;
+    taskMeta.appendChild(bountyBadge);
+
+    const formattedDate = formatDueDate(task.dueDate);
+    if (formattedDate) {
+        const dueTag = document.createElement('span');
+        dueTag.className = 'due-tag';
+        const clockIcon = document.createElement('i');
+        clockIcon.className = 'fa-regular fa-clock';
+        dueTag.append(clockIcon, ` ${formattedDate}`);
+        taskMeta.appendChild(dueTag);
+    }
+
+    taskDetails.append(taskText, taskMeta);
+    taskLeft.append(checkBtn, taskDetails);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.setAttribute('aria-label', 'Hapus Misi');
+    const trashIcon = document.createElement('i');
+    trashIcon.className = 'fa-solid fa-trash-can';
+    deleteBtn.appendChild(trashIcon);
+
+    li.append(taskLeft, deleteBtn);
+
+    checkBtn.addEventListener('click', () => toggleTask(task.id));
+    deleteBtn.addEventListener('click', () => deleteTask(task.id));
+    li.addEventListener('dragstart', () => li.classList.add('dragging'));
+    li.addEventListener('dragend', () => {
+        li.classList.remove('dragging');
+        saveNewOrder();
+    });
 
     return li;
 }
@@ -182,18 +349,22 @@ function createTaskElement(task) {
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return showToast('Isikan rincian misimu dahulu!', 'fa-exclamation-circle');
+    if (text.length > MAX_TASK_LENGTH) {
+        return showToast(`Rincian misi maksimal ${MAX_TASK_LENGTH} karakter!`, 'fa-exclamation-circle');
+    }
 
+    const priority = VALID_PRIORITIES.has(prioritySelect.value) ? prioritySelect.value : 'medium';
     const tasks = getTasks();
     const newTask = {
-        id: crypto.randomUUID(),
+        id: generateTaskId(),
         text,
-        priority: prioritySelect.value,
+        priority,
         dueDate: dueDateInput.value,
         completed: false
     };
 
     tasks.unshift(newTask);
-    saveTasks(tasks);
+    if (!saveTasks(tasks)) return;
 
     taskInput.value = '';
     renderTasks();
@@ -202,16 +373,21 @@ function addTask() {
 }
 
 function toggleTask(id) {
+    let toggledCompleted = false;
+    let found = false;
     const tasks = getTasks().map(t => {
         if (t.id === id) {
-            const completed = !t.completed;
-            if (completed) playSFX('complete');
-            return { ...t, completed };
+            found = true;
+            toggledCompleted = !t.completed;
+            return { ...t, completed: toggledCompleted };
         }
         return t;
     });
 
-    saveTasks(tasks);
+    if (!found) return;
+    if (!saveTasks(tasks)) return;
+
+    if (toggledCompleted) playSFX('complete');
     renderTasks();
 
     const total = tasks.length;
@@ -231,8 +407,11 @@ function toggleTask(id) {
 }
 
 function deleteTask(id) {
-    const tasks = getTasks().filter(t => t.id !== id);
-    saveTasks(tasks);
+    const tasks = getTasks();
+    const remaining = tasks.filter(t => t.id !== id);
+    if (remaining.length === tasks.length) return;
+    if (!saveTasks(remaining)) return;
+
     renderTasks();
     showToast('Misi dihapus dari logbook.', 'fa-trash');
 }
@@ -255,32 +434,42 @@ function updateProgress(tasks) {
 }
 
 function initDragAndDrop() {
-    const items = todoList.querySelectorAll('.task-item');
-    items.forEach(item => {
-        item.addEventListener('dragstart', () => item.classList.add('dragging'));
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
-            saveNewOrder();
-        });
-    });
+    if (isDragAndDropInitialized) return;
+    isDragAndDropInitialized = true;
 
     todoList.addEventListener('dragover', e => {
         e.preventDefault();
-        const dragging = document.querySelector('.dragging');
+        const dragging = todoList.querySelector('.dragging');
         if (!dragging) return;
         const siblings = [...todoList.querySelectorAll('.task-item:not(.dragging)')];
         const nextSibling = siblings.find(sibling => {
             return e.clientY <= sibling.getBoundingClientRect().top + sibling.offsetHeight / 2;
         });
-        todoList.insertBefore(dragging, nextSibling);
+        todoList.insertBefore(dragging, nextSibling || null);
     });
 }
 
 function saveNewOrder() {
-    const itemIds = [...todoList.querySelectorAll('.task-item')].map(el => el.dataset.id);
+    const visibleIds = [...todoList.querySelectorAll('.task-item')]
+        .map(el => el.dataset.id)
+        .filter(Boolean);
+    if (visibleIds.length === 0) return;
+
     const tasks = getTasks();
-    const ordered = itemIds.map(id => tasks.find(t => t.id === id)).filter(Boolean);
-    saveTasks(ordered);
+    const taskById = new Map(tasks.map(t => [t.id, t]));
+    const visibleIdSet = new Set(visibleIds);
+
+    let visibleIdx = 0;
+    const reordered = tasks.map(task => {
+        if (visibleIdSet.has(task.id) && visibleIdx < visibleIds.length) {
+            return taskById.get(visibleIds[visibleIdx++]) || task;
+        }
+        return task;
+    });
+
+    if (!saveTasks(reordered)) {
+        renderTasks();
+    }
 }
 
 // --- ENGINE MINI GAME HD & HADIAH RANDOM ---
@@ -542,8 +731,12 @@ filterBtns.forEach(btn => {
 });
 
 clearCompletedBtn.addEventListener('click', () => {
-    const active = getTasks().filter(t => !t.completed);
-    saveTasks(active);
+    const tasks = getTasks();
+    const active = tasks.filter(t => !t.completed);
+    if (active.length === tasks.length) {
+        return showToast('Tidak ada misi selesai untuk dibersihkan.', 'fa-compass');
+    }
+    if (!saveTasks(active)) return;
     renderTasks();
     showToast('Misi selesai telah dibersihkan!', 'fa-broom');
 });
@@ -553,4 +746,7 @@ closeModalBtn.addEventListener('click', closeTreasureModal);
 playGameBtn.addEventListener('click', startMiniGame);
 restartGameBtn.addEventListener('click', startMiniGame);
 
-document.addEventListener('DOMContentLoaded', renderTasks);
+document.addEventListener('DOMContentLoaded', () => {
+    initDragAndDrop();
+    renderTasks();
+});
