@@ -328,6 +328,20 @@ function cancelEditTask() {
     renderTasks();
 }
 
+function isValidDateInput(dateStr) {
+    if (dateStr === '' || dateStr === null || dateStr === undefined) return true;
+    if (typeof dateStr !== 'string') return false;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!match) return false;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const dt = new Date(Date.UTC(year, month - 1, day));
+    return dt.getUTCFullYear() === year &&
+           dt.getUTCMonth() === month - 1 &&
+           dt.getUTCDate() === day;
+}
+
 function saveEditTask() {
     if (!editingState) return;
 
@@ -340,7 +354,29 @@ function saveEditTask() {
         return;
     }
 
-    const priority = VALID_PRIORITIES.has(editingState.priority) ? editingState.priority : 'medium';
+    if (trimmedText.length > MAX_TASK_LENGTH) {
+        editingState.error = `Rincian misi maksimal ${MAX_TASK_LENGTH} karakter.`;
+        showToast(editingState.error, 'fa-exclamation-circle');
+        shouldFocusEditInput = true;
+        renderTasks();
+        return;
+    }
+
+    if (!VALID_PRIORITIES.has(editingState.priority)) {
+        editingState.error = 'Prioritas misi tidak valid.';
+        showToast(editingState.error, 'fa-exclamation-circle');
+        renderTasks();
+        return;
+    }
+
+    const dueDate = typeof editingState.dueDate === 'string' ? editingState.dueDate.trim() : '';
+    if (!isValidDateInput(dueDate)) {
+        editingState.error = 'Format tanggal tenggat waktu tidak valid.';
+        showToast(editingState.error, 'fa-exclamation-circle');
+        renderTasks();
+        return;
+    }
+
     const tasks = getTasks();
     const taskIndex = tasks.findIndex(t => t.id === editingState.id);
     if (taskIndex === -1) {
@@ -354,12 +390,16 @@ function saveEditTask() {
         return {
             ...t,
             text: trimmedText,
-            priority,
-            dueDate: editingState.dueDate || ''
+            priority: editingState.priority,
+            dueDate
         };
     });
 
-    if (!saveTasks(updatedTasks)) return;
+    if (!saveTasks(updatedTasks)) {
+        editingState.error = 'Gagal menyimpan perubahan. Draft tetap dipertahankan.';
+        renderTasks();
+        return;
+    }
 
     editingState = null;
     shouldFocusEditInput = false;
@@ -426,7 +466,19 @@ function createTaskEditForm(task) {
     cancelBtn.append(cancelIcon, ' Batal');
 
     actionsRow.append(saveBtn, cancelBtn);
-    form.append(inputEl, metaRow, actionsRow);
+    form.append(inputEl, metaRow);
+
+    if (editingState.error) {
+        inputEl.setAttribute('aria-invalid', 'true');
+        const errorEl = document.createElement('p');
+        errorEl.className = 'task-edit-error';
+        errorEl.setAttribute('role', 'alert');
+        errorEl.setAttribute('aria-live', 'assertive');
+        errorEl.textContent = editingState.error;
+        form.appendChild(errorEl);
+    }
+
+    form.appendChild(actionsRow);
 
     inputEl.addEventListener('input', () => {
         if (editingState && editingState.id === task.id) {
@@ -617,6 +669,9 @@ function deleteTask(id) {
     if (remaining.length === tasks.length) return;
     if (!saveTasks(remaining)) return;
 
+    if (editingState && editingState.id === id) {
+        editingState = null;
+    }
     renderTasks();
     showToast('Misi dihapus dari logbook.', 'fa-trash');
 }
@@ -942,6 +997,9 @@ clearCompletedBtn.addEventListener('click', () => {
         return showToast('Tidak ada misi selesai untuk dibersihkan.', 'fa-compass');
     }
     if (!saveTasks(active)) return;
+    if (editingState && !active.some(t => t.id === editingState.id)) {
+        editingState = null;
+    }
     renderTasks();
     showToast('Misi selesai telah dibersihkan!', 'fa-broom');
 });
