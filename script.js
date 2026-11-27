@@ -41,6 +41,8 @@ let currentFilter = 'all';
 let searchQuery = '';
 let hasNotifiedStorageIssue = false;
 let isDragAndDropInitialized = false;
+let editingState = null;
+let shouldFocusEditInput = false;
 
 // Game Variables
 let gameLoopId, gameTimerId;
@@ -279,19 +281,203 @@ function renderTasks() {
         filtered.forEach(t => todoList.appendChild(createTaskElement(t)));
     }
 
+    if (shouldFocusEditInput) {
+        shouldFocusEditInput = false;
+        const activeEditInput = todoList.querySelector('.task-edit-input');
+        if (activeEditInput) {
+            activeEditInput.focus();
+            if (typeof activeEditInput.setSelectionRange === 'function') {
+                const len = activeEditInput.value.length;
+                activeEditInput.setSelectionRange(len, len);
+            }
+        }
+    }
+
     updateProgress(tasks);
 }
 
+function startEditTask(task) {
+    if (editingState && editingState.id !== task.id) {
+        showToast('Simpan atau batalkan edit misi yang sedang aktif terlebih dahulu.', 'fa-exclamation-circle');
+        const activeEditInput = todoList.querySelector('.task-edit-input');
+        if (activeEditInput) activeEditInput.focus();
+        return;
+    }
+
+    if (editingState && editingState.id === task.id) {
+        const activeEditInput = todoList.querySelector('.task-edit-input');
+        if (activeEditInput) activeEditInput.focus();
+        return;
+    }
+
+    editingState = {
+        id: task.id,
+        text: task.text,
+        priority: VALID_PRIORITIES.has(task.priority) ? task.priority : 'medium',
+        dueDate: task.dueDate || '',
+        error: ''
+    };
+    shouldFocusEditInput = true;
+    renderTasks();
+}
+
+function cancelEditTask() {
+    if (!editingState) return;
+    editingState = null;
+    shouldFocusEditInput = false;
+    renderTasks();
+}
+
+function saveEditTask() {
+    if (!editingState) return;
+
+    const trimmedText = String(editingState.text || '').trim();
+    if (!trimmedText) {
+        editingState.error = 'Rincian misi tidak boleh kosong.';
+        showToast(editingState.error, 'fa-exclamation-circle');
+        shouldFocusEditInput = true;
+        renderTasks();
+        return;
+    }
+
+    const priority = VALID_PRIORITIES.has(editingState.priority) ? editingState.priority : 'medium';
+    const tasks = getTasks();
+    const taskIndex = tasks.findIndex(t => t.id === editingState.id);
+    if (taskIndex === -1) {
+        editingState = null;
+        renderTasks();
+        return;
+    }
+
+    const updatedTasks = tasks.map((t, idx) => {
+        if (idx !== taskIndex) return t;
+        return {
+            ...t,
+            text: trimmedText,
+            priority,
+            dueDate: editingState.dueDate || ''
+        };
+    });
+
+    if (!saveTasks(updatedTasks)) return;
+
+    editingState = null;
+    shouldFocusEditInput = false;
+    renderTasks();
+    showToast('Misi berhasil diperbarui!', 'fa-pen');
+}
+
+function createTaskEditForm(task) {
+    const form = document.createElement('form');
+    form.className = 'task-edit-form';
+    form.noValidate = true;
+
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.className = 'task-edit-input';
+    inputEl.maxLength = MAX_TASK_LENGTH;
+    inputEl.value = editingState.text;
+    inputEl.setAttribute('aria-label', 'Edit teks misi');
+    inputEl.placeholder = 'Tuliskan rincian misi...';
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'task-edit-meta';
+
+    const selectEl = document.createElement('select');
+    selectEl.className = 'task-edit-select';
+    selectEl.setAttribute('aria-label', 'Edit prioritas misi');
+    [
+        { value: 'low', label: 'Low Bounty' },
+        { value: 'medium', label: 'Medium Bounty' },
+        { value: 'high', label: 'High Bounty' }
+    ].forEach(opt => {
+        const optionEl = document.createElement('option');
+        optionEl.value = opt.value;
+        optionEl.textContent = opt.label;
+        selectEl.appendChild(optionEl);
+    });
+    selectEl.value = editingState.priority;
+
+    const dateEl = document.createElement('input');
+    dateEl.type = 'date';
+    dateEl.className = 'task-edit-date';
+    dateEl.value = editingState.dueDate;
+    dateEl.setAttribute('aria-label', 'Edit tenggat waktu');
+
+    metaRow.append(selectEl, dateEl);
+
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'task-edit-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'submit';
+    saveBtn.className = 'task-edit-save';
+    saveBtn.setAttribute('aria-label', 'Simpan perubahan');
+    const saveIcon = document.createElement('i');
+    saveIcon.className = 'fa-solid fa-check';
+    saveBtn.append(saveIcon, ' Simpan');
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'task-edit-cancel';
+    cancelBtn.setAttribute('aria-label', 'Batal mengedit');
+    const cancelIcon = document.createElement('i');
+    cancelIcon.className = 'fa-solid fa-xmark';
+    cancelBtn.append(cancelIcon, ' Batal');
+
+    actionsRow.append(saveBtn, cancelBtn);
+    form.append(inputEl, metaRow, actionsRow);
+
+    inputEl.addEventListener('input', () => {
+        if (editingState && editingState.id === task.id) {
+            editingState.text = inputEl.value;
+            if (editingState.error) editingState.error = '';
+        }
+    });
+    selectEl.addEventListener('change', () => {
+        if (editingState && editingState.id === task.id) {
+            editingState.priority = selectEl.value;
+        }
+    });
+    dateEl.addEventListener('input', () => {
+        if (editingState && editingState.id === task.id) {
+            editingState.dueDate = dateEl.value;
+        }
+    });
+
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEditTask();
+        }
+    };
+    form.addEventListener('keydown', handleEscape);
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveEditTask();
+    });
+    cancelBtn.addEventListener('click', cancelEditTask);
+
+    return form;
+}
+
 function createTaskElement(task) {
+    const isEditing = Boolean(editingState && editingState.id === task.id);
     const li = document.createElement('li');
-    li.className = `task-item ${task.completed ? 'completed' : ''}`;
-    li.draggable = true;
+    li.className = `task-item${task.completed ? ' completed' : ''}${isEditing ? ' editing' : ''}`;
+    li.draggable = !isEditing;
     li.dataset.id = task.id;
+
+    if (isEditing) {
+        li.appendChild(createTaskEditForm(task));
+        return li;
+    }
 
     const taskLeft = document.createElement('div');
     taskLeft.className = 'task-left';
 
     const checkBtn = document.createElement('button');
+    checkBtn.type = 'button';
     checkBtn.className = 'check-btn';
     checkBtn.setAttribute('aria-label', 'Tandai Selesai');
     const checkIcon = document.createElement('i');
@@ -326,18 +512,37 @@ function createTaskElement(task) {
     taskDetails.append(taskText, taskMeta);
     taskLeft.append(checkBtn, taskDetails);
 
+    const taskActions = document.createElement('div');
+    taskActions.className = 'task-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'edit-btn';
+    editBtn.setAttribute('aria-label', 'Edit Misi');
+    editBtn.title = 'Edit Misi';
+    const editIcon = document.createElement('i');
+    editIcon.className = 'fa-solid fa-pen';
+    editBtn.appendChild(editIcon);
+
     const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
     deleteBtn.className = 'delete-btn';
     deleteBtn.setAttribute('aria-label', 'Hapus Misi');
+    deleteBtn.title = 'Hapus Misi';
     const trashIcon = document.createElement('i');
     trashIcon.className = 'fa-solid fa-trash-can';
     deleteBtn.appendChild(trashIcon);
 
-    li.append(taskLeft, deleteBtn);
+    taskActions.append(editBtn, deleteBtn);
+    li.append(taskLeft, taskActions);
 
     checkBtn.addEventListener('click', () => toggleTask(task.id));
+    editBtn.addEventListener('click', () => startEditTask(task));
     deleteBtn.addEventListener('click', () => deleteTask(task.id));
-    li.addEventListener('dragstart', () => li.classList.add('dragging'));
+    li.addEventListener('dragstart', () => {
+        if (li.classList.contains('editing')) return;
+        li.classList.add('dragging');
+    });
     li.addEventListener('dragend', () => {
         li.classList.remove('dragging');
         saveNewOrder();
