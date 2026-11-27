@@ -1,14 +1,76 @@
 :root {
-    --primary-gradient: linear-gradient(135deg, #FF5E36, #FFAE33);
-    --gold-glow: #FFD700;
-    --glass-bg: rgba(18, 28, 45, 0.65);
-    --glass-card: rgba(255, 255, 255, 0.12);
-    --glass-card-hover: rgba(255, 255, 255, 0.2);
-    --glass-border: rgba(255, 215, 0, 0.35);
-    --text-light: #FFFFFF;
-    --text-muted: #B0C4DE;
+    /* Color Palette — Grand Line Dark Navy & Gold */
+    --bg-navy-950: #070e1a;
+    --bg-navy-900: #0c1628;
+    --bg-navy-850: #111f36;
+    --bg-navy-800: #182a46;
+
+    --surface-panel: rgba(12, 22, 40, 0.84);
+    --surface-card: rgba(255, 255, 255, 0.06);
+    --surface-card-hover: rgba(255, 255, 255, 0.11);
+    --surface-input: rgba(7, 14, 26, 0.58);
+
+    --gold-500: #e5b842;
+    --gold-400: #f3cf68;
+    --gold-glow: #e5b842;
+    --cream-100: #f8f3e6;
+    --cream-200: #dfd6be;
+
+    --coral-500: #e85d38;
+    --coral-600: #d14c29;
+    --primary-gradient: linear-gradient(135deg, #e85d38, #e59a2e);
+
+    --status-success: #2ecc71;
+    --status-info: #5dade2;
+    --status-warning: #f1c40f;
+    --status-danger: #e74c3c;
+
+    --text-light: #f8f3e6;
+    --text-secondary: #c4d1e3;
+    --text-muted: #93a7c2;
+
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --glass-bg: var(--surface-panel);
+    --glass-card: var(--surface-card);
+    --glass-card-hover: var(--surface-card-hover);
+    --glass-border: rgba(229, 184, 66, 0.32);
+
+    /* Typography */
     --font-title: 'Bungee Inline', cursive, sans-serif;
-    --font-sans: 'Plus Jakarta Sans', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 0.95rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.5rem;
+    --text-2xl: 2.15rem;
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Radii */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+    --radius-pill: 9999px;
+
+    /* Shadows & Focus */
+    --shadow-panel: 0 24px 56px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(229, 184, 66, 0.12);
+    --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.22);
+    --shadow-action: 0 6px 18px rgba(232, 93, 56, 0.35);
+    --focus-ring: 0 0 0 3px rgba(229, 184, 66, 0.35);
+
+    /* Transitions */
+    --transition-fast: 0.16s ease;
+    --transition-base: 0.24s ease;
 }
 
 * {
@@ -19,39 +81,59 @@
 
 body {
     font-family: var(--font-sans);
-    background-image: url('one-piece-bg.jpg'); 
-    background-size: cover; 
-    background-position: center center; 
+    font-size: var(--text-base);
+    line-height: 1.5;
+    background-color: var(--bg-navy-950);
+    background-image: url('one-piece-bg.jpg');
+    background-size: cover;
+    background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
     min-height: 100vh;
     color: var(--text-light);
     display: flex;
     align-items: center;
-    padding: 30px 20px;
+    justify-content: center;
+    padding: var(--space-8) var(--space-5);
     overflow-x: hidden;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(
+        135deg,
+        rgba(7, 14, 26, 0.72) 0%,
+        rgba(12, 22, 40, 0.58) 50%,
+        rgba(7, 14, 26, 0.78) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
 }
 
 .app-layout {
+    position: relative;
+    z-index: 1;
     width: 100%;
-    max-width: 1280px;
+    max-width: 1120px;
     margin: 0 auto;
     display: flex;
-    justify-content: flex-start;
+    justify-content: center;
 }
 
 .container {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
     width: 100%;
-    max-width: 540px;
+    max-width: 640px;
     border: 1px solid var(--glass-border);
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(255, 215, 0, 0.15);
-    transition: all 0.3s ease;
+    box-shadow: var(--shadow-panel);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .header-top {
