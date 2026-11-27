@@ -42,7 +42,7 @@
                 <div class="input-row main-row">
                     <div class="input-wrapper">
                         <i class="fa-solid fa-scroll input-icon"></i>
-                        <input type="text" id="task-input" placeholder="Tuliskan misi barumu, Nakama..." autocomplete="off">
+                        <input type="text" id="task-input" maxlength="200" placeholder="Tuliskan misi barumu, Nakama..." autocomplete="off">
                     </div>
                     <button id="add-task-btn" class="btn-primary">
                         <i class="fa-solid fa-plus"></i>
@@ -133,7 +133,7 @@
                         <div class="reward-badge"><i class="fa-solid fa-gift"></i> HADIAH RAHASIA DIDAPATKAN!</div>
                         <h5 id="reward-title">Manga One Piece Chapter Terbaru</h5>
                         <p id="reward-desc">Kamu memenangkan akses membaca Manga resmi di MangaPlus!</p>
-                        <a id="reward-link" href="#" target="_blank" class="btn-reward-link">
+                        <a id="reward-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-reward-link">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i> Buka Hadiah Sekarang
                         </a>
                     </div>
@@ -146,7 +146,7 @@
         </div>
     </div>
 
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
     <p class="watermark">Roronoa Choqy S ⚔︎</p>
 
     <script src="script.js"></script>
