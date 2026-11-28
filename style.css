@@ -612,6 +612,10 @@ body::before {
     cursor: grabbing;
 }
 
+.task-item.sort-locked {
+    cursor: default;
+}
+
 .task-item.completed {
     background: rgba(255, 255, 255, 0.035);
     border-color: rgba(255, 255, 255, 0.07);
@@ -1284,7 +1288,8 @@ a:focus-visible,
 #task-input:focus-visible,
 .search-box input:focus-visible,
 .select-wrapper select:focus-visible,
-.date-wrapper input:focus-visible {
+.date-wrapper input:focus-visible,
+.sort-wrapper select:focus-visible {
     outline: none;
 }
 
@@ -1306,6 +1311,11 @@ a:focus-visible,
         align-items: stretch;
     }
 
+    .control-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .filter-group {
         width: 100%;
     }
@@ -1314,6 +1324,15 @@ a:focus-visible,
         flex: 1;
         text-align: center;
         min-height: 38px;
+    }
+
+    .sort-wrapper {
+        width: 100%;
+    }
+
+    .sort-wrapper select {
+        flex: 1;
+        width: 100%;
     }
 }
 
