@@ -10,6 +10,11 @@ const emptyState = document.getElementById('empty-state');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const pendingCount = document.getElementById('pending-count');
+const statTotalEl = document.getElementById('stat-total');
+const statPendingEl = document.getElementById('stat-pending');
+const statCompletedEl = document.getElementById('stat-completed');
+const statOverdueEl = document.getElementById('stat-overdue');
+const statTodayEl = document.getElementById('stat-today');
 const clearCompletedBtn = document.getElementById('clear-completed-btn');
 const toastContainer = document.getElementById('toast-container');
 
@@ -411,8 +416,64 @@ function getSortedTasks(taskList, sortMode = currentSort) {
     return indexed.map(entry => entry.task);
 }
 
+function getTaskStatistics(tasks, referenceDate = new Date()) {
+    const stats = {
+        total: 0,
+        pending: 0,
+        completed: 0,
+        overdue: 0,
+        dueToday: 0
+    };
+
+    if (!Array.isArray(tasks)) return stats;
+
+    for (const task of tasks) {
+        if (!task || typeof task !== 'object' || Array.isArray(task)) continue;
+
+        stats.total += 1;
+        if (task.completed) {
+            stats.completed += 1;
+            continue;
+        }
+
+        stats.pending += 1;
+        if (task.dueDate) {
+            const diffDays = getDateDifference(task.dueDate, referenceDate);
+            if (diffDays !== null) {
+                if (diffDays < 0) stats.overdue += 1;
+                else if (diffDays === 0) stats.dueToday += 1;
+            }
+        }
+    }
+
+    return stats;
+}
+
+function setStatValue(el, nextValue) {
+    if (!el) return;
+    const nextStr = String(nextValue);
+    if (el.textContent === nextStr) return;
+    el.textContent = nextStr;
+    if (el.classList) {
+        el.classList.remove('stat-updated');
+        void el.offsetWidth;
+        el.classList.add('stat-updated');
+    }
+}
+
+function updateDashboardStats(tasks = getTasks(), referenceDate = new Date()) {
+    const stats = getTaskStatistics(tasks, referenceDate);
+    setStatValue(statTotalEl, stats.total);
+    setStatValue(statPendingEl, stats.pending);
+    setStatValue(statCompletedEl, stats.completed);
+    setStatValue(statOverdueEl, stats.overdue);
+    setStatValue(statTodayEl, stats.dueToday);
+    return stats;
+}
+
 function renderTasks() {
-    lastRenderedDateKey = getLocalDateKey();
+    const now = new Date();
+    lastRenderedDateKey = getLocalDateKey(now);
     todoList.replaceChildren();
     const tasks = getTasks();
 
@@ -444,6 +505,7 @@ function renderTasks() {
         }
     }
 
+    updateDashboardStats(tasks, now);
     updateProgress(tasks);
 }
 

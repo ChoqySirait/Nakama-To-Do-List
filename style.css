@@ -260,6 +260,38 @@ body::before {
     box-shadow: 0 0 12px rgba(232, 93, 56, 0.55);
 }
 
+.mission-overview {
+    margin-bottom: var(--space-5);
+}
+
+.overview-header {
+    margin-bottom: var(--space-2);
+}
+
+.overview-title {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.overview-card {
+    background: var(--glass-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 10px;
+}
+
 .input-card {
     background: var(--glass-card);
     border: 1px solid var(--border-strong);
