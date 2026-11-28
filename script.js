@@ -46,6 +46,9 @@ let hasNotifiedStorageIssue = false;
 let isDragAndDropInitialized = false;
 let editingState = null;
 let shouldFocusEditInput = false;
+let lastRenderedDateKey = '';
+let deadlineRefreshTimerId = null;
+let isDeadlineRefreshInitialized = false;
 
 // Game Variables
 let gameLoopId, gameTimerId;
@@ -311,6 +314,68 @@ function formatDueDate(dueDate) {
     return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
+function getLocalDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getMsUntilNextLocalMidnight(now = new Date()) {
+    const nextMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0, 0, 0, 50
+    );
+    return Math.max(1000, nextMidnight.getTime() - now.getTime());
+}
+
+function scheduleNextDeadlineRefresh(now = new Date()) {
+    if (deadlineRefreshTimerId !== null) {
+        clearTimeout(deadlineRefreshTimerId);
+        deadlineRefreshTimerId = null;
+    }
+
+    const delay = getMsUntilNextLocalMidnight(now);
+    deadlineRefreshTimerId = setTimeout(() => {
+        deadlineRefreshTimerId = null;
+        refreshDeadlineStatusIfDateChanged();
+        scheduleNextDeadlineRefresh();
+    }, delay);
+}
+
+function refreshDeadlineStatusIfDateChanged(referenceDate = new Date()) {
+    const currentDateKey = getLocalDateKey(referenceDate);
+    if (currentDateKey === lastRenderedDateKey) {
+        return false;
+    }
+
+    lastRenderedDateKey = currentDateKey;
+    renderTasks();
+    return true;
+}
+
+function initDeadlineAutoRefresh() {
+    if (isDeadlineRefreshInitialized) return;
+    isDeadlineRefreshInitialized = true;
+
+    lastRenderedDateKey = getLocalDateKey();
+    scheduleNextDeadlineRefresh();
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            refreshDeadlineStatusIfDateChanged();
+            scheduleNextDeadlineRefresh();
+        }
+    });
+
+    window.addEventListener('focus', () => {
+        refreshDeadlineStatusIfDateChanged();
+        scheduleNextDeadlineRefresh();
+    });
+}
+
 function getSortedTasks(taskList, sortMode = currentSort) {
     if (sortMode === 'manual') {
         return [...taskList];
@@ -347,6 +412,7 @@ function getSortedTasks(taskList, sortMode = currentSort) {
 }
 
 function renderTasks() {
+    lastRenderedDateKey = getLocalDateKey();
     todoList.replaceChildren();
     const tasks = getTasks();
 
@@ -1117,5 +1183,6 @@ restartGameBtn.addEventListener('click', startMiniGame);
 
 document.addEventListener('DOMContentLoaded', () => {
     initDragAndDrop();
+    initDeadlineAutoRefresh();
     renderTasks();
 });
