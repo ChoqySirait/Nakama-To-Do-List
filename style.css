@@ -675,6 +675,46 @@ body::before {
     color: var(--text-muted);
 }
 
+.deadline-badge {
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    border: 1px solid transparent;
+}
+
+.deadline-badge.deadline-overdue {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.45);
+    color: #ff8b7d;
+}
+
+.deadline-badge.deadline-today {
+    background: rgba(232, 93, 56, 0.2);
+    border-color: rgba(255, 159, 67, 0.45);
+    color: #ffb067;
+}
+
+.deadline-badge.deadline-tomorrow,
+.deadline-badge.deadline-soon {
+    background: rgba(229, 184, 66, 0.16);
+    border-color: rgba(229, 184, 66, 0.38);
+    color: var(--gold-400);
+}
+
+.deadline-badge.deadline-upcoming,
+.deadline-badge.deadline-completed {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: var(--text-secondary);
+}
+
+.deadline-badge.deadline-none {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+}
+
 .task-actions {
     display: flex;
     align-items: center;

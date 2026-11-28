@@ -256,10 +256,55 @@ function saveTasks(tasks) {
     }
 }
 
+function parseLocalDate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr.trim());
+    if (!match) return null;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const dt = new Date(year, month - 1, day);
+
+    if (
+        dt.getFullYear() !== year ||
+        dt.getMonth() !== month - 1 ||
+        dt.getDate() !== day
+    ) {
+        return null;
+    }
+    return dt;
+}
+
+function getDateDifference(dueDateStr, referenceDate = new Date()) {
+    const dueLocal = parseLocalDate(dueDateStr);
+    if (!dueLocal) return null;
+
+    const dueUtcDay = Date.UTC(dueLocal.getFullYear(), dueLocal.getMonth(), dueLocal.getDate());
+    const refUtcDay = Date.UTC(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+    return Math.round((dueUtcDay - refUtcDay) / 86400000);
+}
+
+function getDeadlineStatus(task, referenceDate = new Date()) {
+    const diffDays = task && task.dueDate ? getDateDifference(task.dueDate, referenceDate) : null;
+    if (diffDays === null) {
+        return { key: 'none', label: 'Tanpa tenggat' };
+    }
+
+    if (task.completed && diffDays < 0) {
+        return { key: 'completed', label: 'Selesai' };
+    }
+
+    if (diffDays < 0) return { key: 'overdue', label: 'Terlambat' };
+    if (diffDays === 0) return { key: 'today', label: 'Hari ini' };
+    if (diffDays === 1) return { key: 'tomorrow', label: 'Besok' };
+    if (diffDays <= 7) return { key: 'soon', label: 'Segera' };
+    return { key: 'upcoming', label: 'Mendatang' };
+}
+
 function formatDueDate(dueDate) {
-    if (!dueDate || typeof dueDate !== 'string') return '';
-    const parsed = new Date(dueDate);
-    if (Number.isNaN(parsed.getTime())) return '';
+    const parsed = parseLocalDate(dueDate);
+    if (!parsed) return '';
     return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
@@ -560,6 +605,12 @@ function createTaskElement(task) {
         dueTag.append(clockIcon, ` ${formattedDate}`);
         taskMeta.appendChild(dueTag);
     }
+
+    const deadlineStatus = getDeadlineStatus(task);
+    const deadlineBadge = document.createElement('span');
+    deadlineBadge.className = `deadline-badge deadline-${deadlineStatus.key}`;
+    deadlineBadge.textContent = deadlineStatus.label;
+    taskMeta.appendChild(deadlineBadge);
 
     taskDetails.append(taskText, taskMeta);
     taskLeft.append(checkBtn, taskDetails);
