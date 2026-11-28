@@ -5,6 +5,7 @@ const addTaskBtn = document.getElementById('add-task-btn');
 const todoList = document.getElementById('todo-list');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const searchInput = document.getElementById('search-input');
+const sortSelect = document.getElementById('sort-select');
 const emptyState = document.getElementById('empty-state');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
@@ -36,9 +37,11 @@ const STORAGE_KEY = 'tasks_nakama_v2';
 const RECOVERY_STORAGE_KEY = 'tasks_nakama_v2_recovery';
 const MAX_TASK_LENGTH = 200;
 const VALID_PRIORITIES = new Set(['low', 'medium', 'high']);
+const PRIORITY_WEIGHT = { high: 3, medium: 2, low: 1 };
 
 let currentFilter = 'all';
 let searchQuery = '';
+let currentSort = 'manual';
 let hasNotifiedStorageIssue = false;
 let isDragAndDropInitialized = false;
 let editingState = null;
@@ -308,6 +311,41 @@ function formatDueDate(dueDate) {
     return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
+function getSortedTasks(taskList, sortMode = currentSort) {
+    if (sortMode === 'manual') {
+        return [...taskList];
+    }
+
+    const indexed = taskList.map((task, idx) => ({ task, idx }));
+
+    if (sortMode === 'deadline') {
+        indexed.sort((a, b) => {
+            const dateA = parseLocalDate(a.task.dueDate);
+            const dateB = parseLocalDate(b.task.dueDate);
+            const timeA = dateA ? dateA.getTime() : Infinity;
+            const timeB = dateB ? dateB.getTime() : Infinity;
+            if (timeA !== timeB) return timeA - timeB;
+            return a.idx - b.idx;
+        });
+    } else if (sortMode === 'priority-desc') {
+        indexed.sort((a, b) => {
+            const weightA = PRIORITY_WEIGHT[a.task.priority] || 0;
+            const weightB = PRIORITY_WEIGHT[b.task.priority] || 0;
+            if (weightA !== weightB) return weightB - weightA;
+            return a.idx - b.idx;
+        });
+    } else if (sortMode === 'priority-asc') {
+        indexed.sort((a, b) => {
+            const weightA = PRIORITY_WEIGHT[a.task.priority] || 0;
+            const weightB = PRIORITY_WEIGHT[b.task.priority] || 0;
+            if (weightA !== weightB) return weightA - weightB;
+            return a.idx - b.idx;
+        });
+    }
+
+    return indexed.map(entry => entry.task);
+}
+
 function renderTasks() {
     todoList.replaceChildren();
     const tasks = getTasks();
@@ -319,11 +357,13 @@ function renderTasks() {
         return matchesFilter && matchesSearch;
     });
 
-    if (filtered.length === 0) {
+    const displayed = getSortedTasks(filtered, currentSort);
+
+    if (displayed.length === 0) {
         emptyState.style.display = 'block';
     } else {
         emptyState.style.display = 'none';
-        filtered.forEach(t => todoList.appendChild(createTaskElement(t)));
+        displayed.forEach(t => todoList.appendChild(createTaskElement(t)));
     }
 
     if (shouldFocusEditInput) {
@@ -560,9 +600,10 @@ function createTaskEditForm(task) {
 
 function createTaskElement(task) {
     const isEditing = Boolean(editingState && editingState.id === task.id);
+    const isDragAllowed = !isEditing && currentSort === 'manual';
     const li = document.createElement('li');
-    li.className = `task-item${task.completed ? ' completed' : ''}${isEditing ? ' editing' : ''}`;
-    li.draggable = !isEditing;
+    li.className = `task-item${task.completed ? ' completed' : ''}${isEditing ? ' editing' : ''}${currentSort !== 'manual' ? ' sort-locked' : ''}`;
+    li.draggable = isDragAllowed;
     li.dataset.id = task.id;
 
     if (isEditing) {
@@ -642,13 +683,18 @@ function createTaskElement(task) {
     checkBtn.addEventListener('click', () => toggleTask(task.id));
     editBtn.addEventListener('click', () => startEditTask(task));
     deleteBtn.addEventListener('click', () => deleteTask(task.id));
-    li.addEventListener('dragstart', () => {
-        if (li.classList.contains('editing')) return;
+    li.addEventListener('dragstart', (e) => {
+        if (li.classList.contains('editing') || currentSort !== 'manual') {
+            if (e && typeof e.preventDefault === 'function') e.preventDefault();
+            return;
+        }
         li.classList.add('dragging');
     });
     li.addEventListener('dragend', () => {
         li.classList.remove('dragging');
-        saveNewOrder();
+        if (currentSort === 'manual') {
+            saveNewOrder();
+        }
     });
 
     return li;
@@ -749,6 +795,7 @@ function initDragAndDrop() {
     isDragAndDropInitialized = true;
 
     todoList.addEventListener('dragover', e => {
+        if (currentSort !== 'manual') return;
         e.preventDefault();
         const dragging = todoList.querySelector('.dragging');
         if (!dragging) return;
@@ -761,6 +808,7 @@ function initDragAndDrop() {
 }
 
 function saveNewOrder() {
+    if (currentSort !== 'manual') return;
     const visibleIds = [...todoList.querySelectorAll('.task-item')]
         .map(el => el.dataset.id)
         .filter(Boolean);
@@ -1031,6 +1079,13 @@ function escapeHTML(str) {
 addTaskBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', e => e.key === 'Enter' && addTask());
 searchInput.addEventListener('input', e => { searchQuery = e.target.value; renderTasks(); });
+
+if (sortSelect) {
+    sortSelect.addEventListener('change', e => {
+        currentSort = e.target.value || 'manual';
+        renderTasks();
+    });
+}
 
 filterBtns.forEach(btn => {
     btn.addEventListener('click', function() {

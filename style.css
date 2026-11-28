@@ -391,10 +391,16 @@ body::before {
 
 .control-bar {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    gap: 10px;
     margin-bottom: var(--space-5);
+}
+
+.control-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .search-box {
@@ -471,6 +477,47 @@ body::before {
     border-color: rgba(229, 184, 66, 0.38);
     color: var(--gold-400);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.sort-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-input);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 0 12px;
+    min-height: 40px;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.sort-wrapper:focus-within {
+    border-color: var(--gold-500);
+    box-shadow: var(--focus-ring);
+}
+
+.sort-wrapper i {
+    color: var(--gold-400);
+    font-size: var(--text-xs);
+    flex-shrink: 0;
+}
+
+.sort-wrapper select {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--cream-100);
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 0;
+    color-scheme: dark;
+}
+
+.sort-wrapper select option {
+    background: var(--bg-navy-900);
+    color: var(--cream-100);
 }
 
 .empty-state {
